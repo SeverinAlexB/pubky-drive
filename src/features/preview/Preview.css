@@ -1,0 +1,165 @@
+.preview {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-rows: 64px 1fr;
+  background: rgb(0 0 0 / 85%);
+  color: #fff;
+}
+
+.preview-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 16px;
+  background: rgb(0 0 0 / 55%);
+}
+
+.preview-title {
+  flex: 1;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 400;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preview-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid rgb(255 255 255 / 60%);
+  border-radius: 20px;
+  background: transparent;
+  color: #fff;
+  font-weight: 500;
+}
+
+.preview-button:hover {
+  background: rgb(255 255 255 / 10%);
+}
+
+.preview-icon-button {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+}
+
+.preview-icon-button:hover {
+  background: rgb(255 255 255 / 12%);
+}
+
+.preview-stage {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  padding: 0 80px 24px;
+  overflow: auto;
+}
+
+.preview-image {
+  max-width: 100%;
+  max-height: calc(100vh - 120px);
+  transition: transform 0.15s;
+}
+
+.preview-pdf {
+  width: min(1000px, 100%);
+  height: calc(100vh - 100px);
+  border: 0;
+  background: #fff;
+}
+
+.preview-video {
+  max-width: 100%;
+  max-height: calc(100vh - 120px);
+}
+
+.preview-page {
+  align-self: start;
+  width: min(1000px, 100%);
+  min-height: calc(100vh - 100px);
+  padding: 24px;
+  background: #fff;
+  color: #1f1f1f;
+}
+
+.preview-page pre {
+  margin: 0;
+  font:
+    13px/1.5 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Consolas,
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.preview-note {
+  margin: 16px 0 0;
+  color: var(--text-muted);
+}
+
+.preview-message {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.preview-message p {
+  margin: 0;
+}
+
+.preview-meta {
+  color: rgb(255 255 255 / 70%);
+}
+
+.preview-zoom {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: 24px;
+  background: rgb(32 33 36 / 90%);
+  transform: translateX(-50%);
+}
+
+.preview-nav {
+  position: fixed;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border: 0;
+  border-radius: 50%;
+  background: rgb(32 33 36 / 80%);
+  color: #fff;
+  transform: translateY(-50%);
+}
+
+.preview-nav:hover {
+  background: rgb(60 64 67 / 90%);
+}
+
+.preview-nav.previous {
+  left: 16px;
+}
+
+.preview-nav.next {
+  right: 16px;
+}

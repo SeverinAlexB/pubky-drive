@@ -1,0 +1,85 @@
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 720px;
+  height: 48px;
+  padding: 0 8px 0 16px;
+  border-radius: 24px;
+  background: var(--surface-strong);
+}
+
+.search:focus-within {
+  background: var(--card);
+  box-shadow: var(--shadow-raised);
+}
+
+.search.open {
+  border-radius: 24px 24px 0 0;
+}
+
+.search-icon {
+  color: var(--text-muted);
+  flex: none;
+}
+
+.search-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  font-size: 16px;
+  outline: none;
+}
+
+.search-spinner {
+  color: var(--text-muted);
+}
+
+.search-suggestions {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 8px 0;
+  border-top: 1px solid var(--divider);
+  border-radius: 0 0 16px 16px;
+  background: var(--card);
+  box-shadow: var(--shadow-menu);
+  list-style: none;
+}
+
+.search-suggestions li {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 44px;
+  padding: 0 16px;
+  cursor: pointer;
+}
+
+.search-suggestions li:hover,
+.search-suggestions li[aria-selected='true'] {
+  background: var(--hover);
+}
+
+.search-suggestion-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-suggestion-location {
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-faint);
+  font-size: 12px;
+}

@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   check:
-    name: Check repository
+    name: Check, test and build
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -37,44 +37,16 @@ jobs:
       - name: Audit dependencies
         run: npm run audit
 
-      - name: Check
+      - name: Check formatting and lint
         run: npm run check
 
-  build:
-    name: Build ${{ matrix.template }}
-    needs: check
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        template:
-          - basic-pubky-app
-          - vite-starter
+      - name: Unit tests
+        run: npm test
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: ${{ matrix.template }}/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci
-        working-directory: ${{ matrix.template }}
-
-      - name: Audit dependencies
-        run: npm run audit
-        working-directory: ${{ matrix.template }}
-
-      - name: Test
-        run: npm test --if-present
-        working-directory: ${{ matrix.template }}
-
-      - name: Build
+      - name: Build for testnet
         run: npm run build
-        working-directory: ${{ matrix.template }}
+
+      - name: Build for mainnet
+        run: npm run build
+        env:
+          VITE_PUBKY_TESTNET: 'false'

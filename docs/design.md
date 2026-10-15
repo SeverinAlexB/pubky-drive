@@ -1,0 +1,182 @@
+# Design: Drive on a Pubky Homeserver
+
+Pubky Drive is a browser file explorer for the files on your own Pubky
+Homeserver. It follows how Google Drive works ([research notes](research.md))
+where the Homeserver allows it, and departs from it where the storage model is
+different. This document explains those mappings. The numbered documents in
+[`spec/`](spec/README.md) describe the user interface.
+
+It targets `@synonymdev/pubky` 0.16.1 and Homeservers of the same release.
+
+## What the Homeserver provides
+
+A Homeserver stores files under absolute paths for each user. It doesn't store
+folders, file IDs or any metadata beyond what HTTP needs. From the SDK, the app
+can:
+
+- **List** a directory (`session.storage.list(path, cursor, reverse, limit,
+shallow)`). A shallow listing returns the direct children; child directories
+  end with `/`. Pages are limited; the last entry is the cursor for the next
+  page.
+- **Read metadata** with `stats(path)`: size (`contentLength`), media type
+  (`contentType`), `lastModifiedMs` and `etag`. The Homeserver detects the
+  media type from the file's first bytes, then from its extension.
+- **Read and write** whole files (`getBytes`, `putBytes`) and **delete** files.
+  There is no server-side copy, move or rename.
+- **Read public files without signing in** (`pubky.publicStorage`).
+- **Stream events** (`pubky.eventStreamForUser`): every write (`PUT`) and
+  delete (`DEL`) under a path, newest first or live.
+
+Paths must follow the Homeserver's rules: segments of at most 255 bytes,
+whole paths of at most 972 bytes, and no control characters, backslashes,
+trailing whitespace, `.` or `..` segments.
+
+### Path encoding
+
+The SDK APIs expect paths in different forms. Tests against a 0.16.1 testnet
+showed:
+
+| API                                                             | Path form                                                      | Example for the name `a b.txt` |
+| --------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------ |
+| `session.storage` methods                                       | Plain names; the SDK encodes them                              | `/pub/x/a b.txt`               |
+| `publicStorage` addresses, event `path()` filters, viewer links | Each segment percent-encoded once, with URL path-segment rules | `/pub/x/a%20b.txt`             |
+| URLs returned by `list()` and event paths                       | Each segment percent-encoded twice                             | `/pub/x/a%2520b.txt`           |
+
+The app keeps plain paths internally. It decodes listed and event paths twice,
+and encodes a segment once when it builds a public address or an event filter.
+URL path-segment rules leave characters such as `:` and `,` unencoded;
+`encodeURIComponent` encodes them, and the Homeserver then reports 404.
+
+A backslash in a name turns into a `/` on the way to the Homeserver, so names
+with backslashes are rejected.
+
+## Areas: public and private
+
+Every file lives in one of two **areas**:
+
+| Area                | Who can read                                     | Shown as             |
+| ------------------- | ------------------------------------------------ | -------------------- |
+| Public (`/pub/…`)   | Anyone who knows the address, without signing in | Globe icon, "Public" |
+| Private (`/priv/…`) | You, and apps you authorize to read it           | Lock icon, "Private" |
+
+Private means access-controlled, not encrypted: the Homeserver operator can
+read private files. The app says this wherever it asks you to choose an area.
+
+"My Drive" shows the two areas as top-level folders. Changing a file's general
+access in the share dialog moves the file to the same relative path in the
+other area.
+
+## Access modes
+
+At sign-in, you choose what the app may access. The app requests the matching
+capabilities from Pubky Ring:
+
+| Mode                   | Public area root          | Private area root          | Requested capabilities                       |
+| ---------------------- | ------------------------- | -------------------------- | -------------------------------------------- |
+| Drive folder (default) | `/pub/pubky-drive/files/` | `/priv/pubky-drive/files/` | `/pub/pubky-drive/:rw,/priv/pubky-drive/:rw` |
+| Entire homeserver      | `/pub/`                   | `/priv/`                   | `/pub/:rw,/priv/:rw`                         |
+
+In **Entire homeserver** mode, you can browse and change files that other apps
+wrote. The app warns that changing them can break those apps.
+
+Pubky Ring can approve fewer capabilities than requested. After sign-in, the
+app reads the approved capabilities from `session.info.capabilities` and the
+mode from them, not from the original request. An area without read and write
+access appears disabled with an explanation, and features that need the
+app's private data (Starred and Bin) are turned off when it's missing.
+
+## App data
+
+Data that the Homeserver doesn't store for files lives in the app's private
+folder, `/priv/pubky-drive/`, in both modes:
+
+| Path                                          | Content                                              |
+| --------------------------------------------- | ---------------------------------------------------- |
+| `/priv/pubky-drive/app/starred.json`          | The paths of starred items                           |
+| `/priv/pubky-drive/bin/<entry-id>/entry.json` | A binned item's original path, kind and binning time |
+| `/priv/pubky-drive/bin/<entry-id>/content/…`  | The binned item's files                              |
+
+In Entire homeserver mode, the listings hide `/priv/pubky-drive/app/` and
+`/priv/pubky-drive/bin/`, so that the bin doesn't appear twice.
+
+## Folders
+
+Directories exist only while they contain a file. To keep an empty folder,
+the app writes a zero-byte marker file named `.keep` into it. Listings hide
+`.keep` files. When a folder gets its first real file, the marker stays; it is
+removed together with the folder.
+
+A folder's modified time is not available from the Homeserver, so folder rows
+show "—" for date and size, like Google Drive's size column.
+
+## Operations without server support
+
+The Homeserver has no copy, move or rename. The app builds them from
+reads, writes and deletes:
+
+| Operation                     | Steps                                                                                            |
+| ----------------------------- | ------------------------------------------------------------------------------------------------ |
+| Copy a file                   | Read the bytes, write them to the new path.                                                      |
+| Move or rename a file         | Copy, then delete the original.                                                                  |
+| Move, rename or copy a folder | List every file below it, then copy (and for a move, delete) each one.                           |
+| Move to bin                   | Move the item into a new bin entry and write `entry.json`.                                       |
+| Restore                       | Move the content back to the original path. If that name is taken, add a number: `name (1).txt`. |
+
+Each multi-file operation shows progress. These operations aren't atomic: if
+one step fails, the app stops, reports which files were already moved, and
+leaves both copies in place rather than deleting data. Before writing, the app
+checks that the destination name is free, so an operation never overwrites a
+file silently.
+
+Large files are read into memory for these steps, because the SDK has no
+streaming upload. The app warns before uploading or copying files over 100 MB.
+
+## Starred, Recent and search
+
+- **Starred** reads `starred.json`. Moving or renaming a starred item updates
+  its stored path; deleting it removes the entry.
+- **Recent** reads the newest events for the area roots
+  (`eventStreamForUser(...).path(root).reverse().limit(200)`), keeps the latest
+  write per path, skips deleted paths and hidden files, and groups the result
+  by day.
+- **Search** lists both areas recursively and matches names that contain the
+  query (case-insensitive). Results show their folder in a Location column.
+
+## Bin
+
+Moving an item to the bin moves its content to
+`/priv/pubky-drive/bin/<entry-id>/content/` and records where it came from.
+Public files therefore stop being public when they are binned. Copies that
+others already downloaded can't be recalled.
+
+When the app starts, it deletes bin entries older than 30 days. Delete forever
+and Empty bin ask for confirmation.
+
+## Sharing links
+
+A public file has two addresses:
+
+- The **Pubky address**, `pubky<public-key>/pub/…/name`, which other Pubky
+  apps and Pubky Explorer understand.
+- A **viewer link** into this app, `#/view/pubky<public-key>/pub/…/name`. The
+  viewer opens without signing in, previews the file with public storage, and
+  offers a download.
+
+"Copy link" copies the viewer link. Private files have no link; the share
+dialog explains how to make a file public instead. Sharing with specific
+people isn't possible, because Homeservers don't grant access to other
+identities.
+
+## Live updates
+
+While a folder is open, the app follows the live event stream for that folder
+and reloads the listing when another device or app changes it.
+
+## Not included
+
+- Storage quota display: the SDK doesn't report quota or usage. A full quota
+  shows the Homeserver's error (`507 Insufficient Storage`) when uploading.
+- Versions, activity history, comments, descriptions, shortcuts and offline
+  mode.
+- End-to-end encryption of private files. SDK 0.16 can deliver encryption keys
+  scoped to paths, which a later version could use to encrypt private files.

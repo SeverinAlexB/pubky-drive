@@ -1,0 +1,25 @@
+/** Folder name for everything Pubky Drive stores, and the client ID shown to Pubky Ring. */
+export const APP_ID = 'pubky-drive'
+
+/** Files larger than this are confirmed before upload, because they are held in memory. */
+export const LARGE_FILE_BYTES = 100 * 1024 * 1024
+
+/** Bin entries older than this are deleted when the app starts. */
+export const BIN_RETENTION_DAYS = 30
+
+// Events contain resource metadata, not file contents. Bound incoming SSE payloads.
+export const MAX_EVENT_BYTES = 8 * 1024
+
+export const IS_TESTNET = import.meta.env.VITE_PUBKY_TESTNET !== 'false'
+export const TESTNET_HOST = import.meta.env.VITE_PUBKY_TESTNET_HOST || undefined
+export const HTTP_RELAY =
+  import.meta.env.VITE_PUBKY_HTTP_RELAY?.trim() ||
+  (IS_TESTNET ? `http://${TESTNET_HOST ?? 'localhost'}:15412/inbox/` : undefined)
+export const STORAGE_NAMESPACE = import.meta.env.VITE_PUBKY_STORAGE_NAMESPACE?.trim() || undefined
+
+export const SHOW_DEVELOPMENT_SIGNUP =
+  import.meta.env.DEV && IS_TESTNET && import.meta.env.VITE_SHOW_DEVELOPMENT_SIGNUP !== 'false'
+
+// Fixed homeserver public key used by Pubky's local testnet.
+export const DEVELOPMENT_SIGNUP_HOMESERVER =
+  'pubky8pinxxgqs41n4aididenw5apqp1urfmzdztr8jt4abrkdn435ewo'

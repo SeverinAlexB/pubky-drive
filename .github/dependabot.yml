@@ -16,19 +16,6 @@ updates:
       interval: weekly
     cooldown:
       default-days: 7
-    groups:
-      repo-tools:
-        patterns:
-          - '*'
-        update-types:
-          - minor
-          - patch
-  - package-ecosystem: npm
-    directory: /basic-pubky-app
-    schedule:
-      interval: weekly
-    cooldown:
-      default-days: 7
       exclude:
         - '@synonymdev/pubky'
     groups:
@@ -37,13 +24,11 @@ updates:
           - '@synonymdev/pubky'
           - '@synonymdev/pubky-*'
           - '@synonymdev/*pubky*'
-  - package-ecosystem: npm
-    directory: /vite-starter
-    schedule:
-      interval: weekly
-    cooldown:
-      default-days: 7
-    groups:
-      vite-starter:
+      dependencies:
         patterns:
           - '*'
+        exclude-patterns:
+          - '@synonymdev/*'
+        update-types:
+          - minor
+          - patch

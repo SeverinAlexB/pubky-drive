@@ -1,0 +1,87 @@
+.share-heading {
+  margin: 8px 0 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.share-person {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.share-access {
+  display: grid;
+  gap: 4px;
+}
+
+.share-option {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.share-option:hover {
+  background: var(--hover);
+}
+
+.share-option[aria-disabled='true'] {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.share-option > span:last-child {
+  display: grid;
+}
+
+.share-option-icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--surface-strong);
+  color: var(--text-muted);
+}
+
+.share-option-icon.public {
+  background: #c4eed0;
+  color: #0d652d;
+}
+
+.share-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.share-address {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 8px 4px 8px 12px;
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.share-address > .muted {
+  grid-column: 1 / -1;
+  font-size: 12px;
+}
+
+.share-address code {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
+.share-actions {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}

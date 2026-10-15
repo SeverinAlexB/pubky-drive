@@ -1,0 +1,77 @@
+.upload-panel {
+  position: fixed;
+  right: 24px;
+  bottom: 0;
+  z-index: 40;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  border-radius: 16px 16px 0 0;
+  background: var(--card);
+  box-shadow: var(--shadow-menu);
+  overflow: hidden;
+}
+
+.upload-panel-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 56px;
+  padding: 0 8px 0 18px;
+  background: var(--surface);
+}
+
+.upload-panel-header h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.upload-panel-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  padding: 0 4px 0 18px;
+  background: var(--surface-strong);
+  color: var(--text-muted);
+}
+
+.upload-panel-status .button {
+  height: 28px;
+}
+
+.upload-panel-rows {
+  max-height: 240px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.upload-panel-rows li {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 50px;
+  padding: 0 14px 0 18px;
+}
+
+.upload-panel-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-queued {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--divider);
+  border-radius: 50%;
+}
+
+.upload-failed {
+  display: flex;
+  align-items: center;
+}
