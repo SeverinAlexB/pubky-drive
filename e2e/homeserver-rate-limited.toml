@@ -1,0 +1,67 @@
+# Local testnet homeserver with the rate limits of the production homeserver (homeserver.pubky.app),
+# so that tests and manual checks run into the same 429 responses as mainnet.
+#
+#   pubky-testnet --homeserver-config e2e/homeserver-rate-limited.toml
+#
+# The limits mirror the [[drive.rate_limits]] block and default quotas in pubky/pubky-stack,
+# .github/workflows/pubky-homeserver-cicd.yml (read on 2026-10-15). Keep them in sync when production
+# changes. This file overlays the homeserver's embedded defaults; the testnet sets ports and DHT nodes.
+
+[general]
+signup_mode = "open"
+
+[storage]
+type = "in_memory"
+
+[pkdns]
+icann_domain = "localhost"
+
+# Sign-in
+[[drive.rate_limits]]
+path = "/session"
+method = "POST"
+quota = "20r/m"
+burst = 50
+key = "ip"
+
+# Current session info
+[[drive.rate_limits]]
+path = "/session"
+method = "GET"
+quota = "5r/s"
+key = "user"
+
+# Sign-out
+[[drive.rate_limits]]
+path = "/session"
+method = "DELETE"
+quota = "5r/s"
+key = "user"
+
+# Events feed
+[[drive.rate_limits]]
+path = "/events/"
+method = "GET"
+quota = "3r/s"
+burst = 10
+key = "ip"
+
+# Event stream: the limit Pubky Drive ran into on mainnet
+[[drive.rate_limits]]
+path = "/events-stream"
+method = "GET"
+quota = "1r/s"
+burst = 5
+key = "ip"
+
+# Deleting public files
+[[drive.rate_limits]]
+path = "/pub/**"
+method = "DELETE"
+quota = "5r/s"
+burst = 50
+key = "user"
+
+[default_quotas]
+rate_write = "1mb/s"
+rate_write_burst = 20

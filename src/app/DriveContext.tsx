@@ -9,13 +9,20 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { accessFromCapabilities, HIDDEN_APP_FOLDERS, type DriveAccess } from '../drive/access'
+import {
+  accessFromCapabilities,
+  HIDDEN_APP_FOLDERS,
+  HOMESERVER_ROOTS,
+  type DriveAccess,
+} from '../drive/access'
 import type { DriveItem } from '../drive/items'
 import type { Area, StoragePath } from '../drive/paths'
 import { DriveStorage, type FileStore } from '../drive/storage'
 import { deleteExpiredEntries } from '../features/bin/bin'
 import { listEverything } from '../features/search/search'
 import { loadStarred, saveStarred } from '../features/starred/starred'
+import { EventHub } from '../pubky/eventHub'
+import { homeserverEventSource } from '../pubky/events'
 
 /** The signed-in user's drive, shared by every view. */
 interface DriveContextValue {
@@ -32,6 +39,8 @@ interface DriveContextValue {
   starred: ReadonlySet<StoragePath>
   /** Applies `change` to the starred paths and saves them. */
   updateStarred(change: (current: ReadonlySet<StoragePath>) => Set<StoragePath>): Promise<void>
+  /** The session's one connection to the homeserver's event log. */
+  events: EventHub
   /** Every file and folder in both Drive areas, cached until the next change. */
   loadSearchIndex(): Promise<DriveItem[]>
   /** Switches to a session of the same identity with different access, such as homeserver access. */
@@ -95,14 +104,33 @@ export function DriveProvider({ session, replaceSession, children }: DriveProvid
     }
   }, [drive, access.appData])
 
-  const searchIndex = useRef<{ version: number; items: Promise<DriveItem[]> }>(undefined)
+  const events = useMemo(
+    () => new EventHub(homeserverEventSource(session, watchedFolders(access))),
+    [session, access],
+  )
+  // Changes made elsewhere invalidate the search index; counting them avoids re-rendering on each event.
+  const remoteChanges = useRef(0)
+  useEffect(() => {
+    const unsubscribe = events.subscribe(() => remoteChanges.current++)
+    // Start on the next tick: React's development mode mounts effects twice, and this keeps that
+    // from opening a second stream against the homeserver's rate limit.
+    const timer = setTimeout(() => void events.start())
+    return () => {
+      clearTimeout(timer)
+      unsubscribe()
+      events.stop()
+    }
+  }, [events])
+
+  const searchIndex = useRef<{ version: string; items: Promise<DriveItem[]> }>(undefined)
   const loadSearchIndex = useCallback(() => {
-    if (searchIndex.current?.version !== version) {
+    const indexVersion = `${version}:${remoteChanges.current}`
+    if (searchIndex.current?.version !== indexVersion) {
       const items = listEverything(drive, roots)
       items.catch(() => {
         searchIndex.current = undefined
       })
-      searchIndex.current = { version, items }
+      searchIndex.current = { version: indexVersion, items }
     }
     return searchIndex.current.items
   }, [drive, roots, version])
@@ -120,6 +148,7 @@ export function DriveProvider({ session, replaceSession, children }: DriveProvid
       updateStarred,
       loadSearchIndex,
       replaceSession,
+      events,
     }),
     [
       session,
@@ -133,6 +162,7 @@ export function DriveProvider({ session, replaceSession, children }: DriveProvid
       updateStarred,
       loadSearchIndex,
       replaceSession,
+      events,
     ],
   )
 
@@ -143,4 +173,16 @@ export function useDrive() {
   const value = useContext(DriveContext)
   if (!value) throw new Error('useDrive must be used inside DriveProvider')
   return value
+}
+
+/**
+ * The folders whose events the app follows: the whole storage of areas with homeserver access,
+ * otherwise the Drive folder.
+ */
+function watchedFolders(access: DriveAccess): StoragePath[] {
+  return (['public', 'private'] as Area[]).flatMap((area) => {
+    if (access.homeserver[area]) return [HOMESERVER_ROOTS[area]]
+    const root = access.roots[area]
+    return root ? [root] : []
+  })
 }

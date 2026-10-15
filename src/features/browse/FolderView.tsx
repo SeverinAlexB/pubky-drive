@@ -1,15 +1,15 @@
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useDrive } from '../../app/DriveContext'
 import { areaLabel, folderRoute } from '../../app/locations'
 import { navigate, type Route, type Scope } from '../../app/routes'
+import { useLiveChanges } from '../../app/useLiveChanges'
 import { useLoad } from '../../app/useLoad'
 import { useViewPreferences } from '../../app/viewPreferences'
 import { APP_ID } from '../../config'
 import { canWrite, DRIVE_ROOTS, HOMESERVER_ROOTS } from '../../drive/access'
 import { itemFromPath } from '../../drive/items'
 import { parentOf, type Area, type StoragePath } from '../../drive/paths'
-import { followEvents } from '../../pubky/events'
 import { Menu, separator, type MenuEntry } from '../../ui/Menu'
 import { itemMenuEntries, newMenuEntries } from '../actions/menus'
 import { useItemActions } from '../actions/useItemActions'
@@ -31,43 +31,19 @@ interface FolderViewProps {
  * stream. See docs/spec/02-navigation.md.
  */
 export function FolderView({ scope, area, folder }: FolderViewProps) {
-  const { drive, access, session, version } = useDrive()
+  const { drive, access, version } = useDrive()
   const root =
     scope === 'drive' ? access.roots[area] : access.homeserver[area] && HOMESERVER_ROOTS[area]
   const path = root && ((folder ? `${root}${folder}/` : root) as StoragePath)
-  const [liveVersion, setLiveVersion] = useState(0)
 
   const load = useCallback(async (): Promise<ListItem[]> => {
     if (!path) return []
     const items = await drive.listFolder(path)
     return scope === 'homeserver' ? items.map(withHomeserverBadge) : items
   }, [drive, path, scope])
-  // Reload after changes made here (`version`) and elsewhere (`liveVersion`).
-  const { data: items, error, retry } = useLoad(load, `${version}:${liveVersion}`)
-
-  useEffect(() => {
-    if (!path) return
-    let timer: ReturnType<typeof setTimeout> | undefined
-    let stop: (() => Promise<void>) | undefined
-    let active = true
-
-    followEvents(session, path, () => {
-      clearTimeout(timer)
-      timer = setTimeout(() => setLiveVersion((current) => current + 1), 400)
-    }).then(
-      (stopFollowing) => {
-        if (active) stop = stopFollowing
-        else void stopFollowing()
-      },
-      (followError: unknown) => console.warn('Live updates are unavailable', followError),
-    )
-
-    return () => {
-      active = false
-      clearTimeout(timer)
-      void stop?.()
-    }
-  }, [session, path])
+  // Reload after changes made here (`version`) and elsewhere (`liveChanges`).
+  const liveChanges = useLiveChanges(path ? [path] : [])
+  const { data: items, error, retry } = useLoad(load, `${version}:${liveChanges}`)
 
   if (!root || !path) {
     if (scope === 'homeserver') return <HomeserverLocked />

@@ -1,26 +1,25 @@
-// Recently changed files, read from the homeserver's event log. See docs/design.md.
+// Recently changed files, from the homeserver's event log. See docs/design.md.
 
-import type { Session } from '@synonymdev/pubky'
 import { mapWithConcurrency } from '../../drive/concurrency'
 import type { DriveItem } from '../../drive/items'
-import { isFolderPath, type StoragePath } from '../../drive/paths'
+import { isFolderPath, isWithin, type StoragePath } from '../../drive/paths'
 import type { DriveStorage } from '../../drive/storage'
-import { readLatestEvents, type StorageEvent } from '../../pubky/events'
+import type { EventHub } from '../../pubky/eventHub'
+import type { StorageEvent } from '../../pubky/events'
 
-const EVENTS_PER_AREA = 300
-
-/** Up to `limit` files that were written most recently below `roots` and still exist. */
+/**
+ * Up to `limit` files below `roots` that were written most recently and still exist. Reads the
+ * session's event history, so it makes no event-stream requests of its own.
+ */
 export async function loadRecentFiles(
-  session: Session,
+  events: EventHub,
   drive: DriveStorage,
   roots: readonly StoragePath[],
   limit = 50,
 ): Promise<DriveItem[]> {
-  const eventsPerRoot = await Promise.all(
-    roots.map((root) => readLatestEvents(session, root, EVENTS_PER_AREA)),
-  )
-  const paths = latestWrites(eventsPerRoot.flat())
-    .filter((path) => drive.isVisible(path))
+  await events.ready
+  const paths = latestWrites(events.history())
+    .filter((path) => roots.some((root) => isWithin(path, root)) && drive.isVisible(path))
     .slice(0, limit)
   const items = await mapWithConcurrency(paths, 8, (path) => drive.stat(path))
   return items.filter((item): item is DriveItem => item !== undefined)

@@ -1,4 +1,5 @@
-// Reading and following homeserver event streams.
+// Homeserver event streams. The app reads them through one EventHub per session (eventHub.ts),
+// because the production homeserver allows only one event-stream request per second per IP.
 
 import type { Event as PubkyEvent, EventStreamBuilder, Session } from '@synonymdev/pubky'
 import { MAX_EVENT_BYTES } from '../config'
@@ -13,61 +14,49 @@ export interface StorageEvent {
   cursor: string
 }
 
-/** A builder for the session owner's events below `folder`, authorized for private folders. */
-function eventsBelow(session: Session, folder: StoragePath, cursor: string | null = null) {
-  const builder = pubky
-    .eventStreamForUser(session.info.publicKey, cursor)
-    .path(toWirePath(folder))
-    .maxEventBytes(MAX_EVENT_BYTES)
-  return folder.startsWith('/priv/') ? builder.session(session) : builder
+/** Where an EventHub gets its events from. */
+export interface EventSource {
+  /** The newest `limit` events, newest first. */
+  latest(limit: number): Promise<StorageEvent[]>
+  /** Events after `cursor` as they happen. The stream ends when the connection closes. */
+  live(cursor: string | null): Promise<ReadableStream<StorageEvent>>
 }
 
-/** The newest `limit` events below `folder`, newest first. */
-export async function readLatestEvents(session: Session, folder: StoragePath, limit: number) {
-  return readAll(eventsBelow(session, folder).reverse().limit(limit))
-}
-
-/**
- * Calls `onEvent` for every new event below `folder` until the returned `stop` is called.
- * Past events are skipped.
- */
-export async function followEvents(
+/** Events of the session owner below any of `folders`, in one request per call. */
+export function homeserverEventSource(
   session: Session,
-  folder: StoragePath,
-  onEvent: (event: StorageEvent) => void,
-): Promise<() => Promise<void>> {
-  // A live stream starts with the full history, so start after the newest existing event.
-  const [newest] = await readLatestEvents(session, folder, 1)
-  const stream = await eventsBelow(session, folder, newest?.cursor ?? null)
-    .live()
-    .subscribe()
-  const reader = stream.getReader()
-  let stopped = false
+  folders: readonly StoragePath[],
+): EventSource {
+  const builder = (cursor: string | null) => {
+    let next = pubky
+      .eventStreamForUser(session.info.publicKey, cursor)
+      .maxEventBytes(MAX_EVENT_BYTES)
+    for (const folder of folders) next = next.path(toWirePath(folder))
+    // Private folders need the session; it doesn't hurt public ones.
+    return folders.some((folder) => folder.startsWith('/priv/')) ? next.session(session) : next
+  }
 
-  void (async () => {
-    try {
-      while (!stopped) {
-        const { done, value } = await reader.read()
-        if (done) return
-        onEvent(toStorageEvent(value as PubkyEvent))
+  return {
+    async latest(limit) {
+      const events: StorageEvent[] = []
+      for await (const event of await subscribe(builder(null).reverse().limit(limit))) {
+        events.push(toStorageEvent(event))
       }
-    } catch (error) {
-      if (!stopped) console.warn('Live updates stopped', error)
-    }
-  })()
-
-  return async () => {
-    stopped = true
-    await reader.cancel().catch(() => {})
+      return events
+    },
+    async live(cursor) {
+      const stream = (await builder(cursor).live().subscribe()) as ReadableStream<PubkyEvent>
+      return stream.pipeThrough(
+        new TransformStream<PubkyEvent, StorageEvent>({
+          transform: (event, controller) => controller.enqueue(toStorageEvent(event)),
+        }),
+      )
+    },
   }
 }
 
-async function readAll(builder: EventStreamBuilder) {
-  const events: StorageEvent[] = []
-  for await (const event of (await builder.subscribe()) as unknown as AsyncIterable<PubkyEvent>) {
-    events.push(toStorageEvent(event))
-  }
-  return events
+async function subscribe(builder: EventStreamBuilder) {
+  return (await builder.subscribe()) as unknown as AsyncIterable<PubkyEvent>
 }
 
 function toStorageEvent(event: PubkyEvent): StorageEvent {
