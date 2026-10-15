@@ -42,8 +42,9 @@ test('make a copy, then move it with the move dialog', async ({ page }) => {
 
   await contextMenu(page, 'Copy of notes.md', 'Organise', 'Move')
   const dialog = page.getByRole('dialog', { name: 'Move ‘Copy of notes.md’' })
+  await dialog.getByRole('tab', { name: 'All locations' }).click()
   await expect(dialog).toContainText('Current location: Private')
-  await dialog.getByRole('button', { name: 'Back' }).isDisabled()
+  await expect(dialog.getByRole('button', { name: 'Back' })).toBeDisabled()
   await dialog
     .getByRole('option', { name: /Private/ })
     .getByRole('button', { name: 'Open Private' })
@@ -53,7 +54,9 @@ test('make a copy, then move it with the move dialog', async ({ page }) => {
   await dialog.getByRole('button', { name: 'Move' }).click()
 
   await expect(row(page, 'Copy of notes.md')).toHaveCount(0)
-  await expect(page.getByRole('status')).toContainText('moved to ‘Private › Archive’')
+  await expect(page.getByRole('status')).toContainText(
+    '‘Copy of notes.md’ moved from ‘Private’ to ‘Archive’',
+  )
   await row(page, 'Archive').dblclick()
   await expect(row(page, 'Copy of notes.md')).toBeVisible()
 })
@@ -153,7 +156,9 @@ test('cut and paste moves the item once, and undo moves it back', async ({ page 
   await row(page, 'Target').dblclick()
   await expect(page.getByRole('navigation', { name: 'Folder path' })).toContainText('Target')
   await page.keyboard.press('Meta+v')
-  await expect(page.getByRole('status')).toContainText('‘notes.md’ moved to ‘Private › Target’')
+  await expect(page.getByRole('status')).toContainText(
+    '‘notes.md’ moved from ‘Private’ to ‘Target’',
+  )
   await expect(row(page, 'notes.md')).toBeVisible()
   await page.keyboard.press('Meta+v')
   await expect(row(page, 'notes.md')).toHaveCount(1)
@@ -184,4 +189,36 @@ test('undo goes back through several actions, newest first', async ({ page }) =>
   await page.keyboard.press('Meta+z')
   await expect(row(page, 'a.txt')).toBeVisible()
   await expect(row(page, 'b.txt')).toHaveCount(0)
+})
+
+test('the Move dialog suggests recent folders, lists starred ones and searches', async ({
+  page,
+}) => {
+  await createFolder(page, 'Photos')
+  await contextMenu(page, 'Photos', 'Organise', 'Add to starred')
+
+  await contextMenu(page, 'report.txt', 'Organise', 'Move')
+  const dialog = page.getByRole('dialog', { name: 'Move ‘report.txt’' })
+  await expect(dialog.getByRole('tab', { name: 'Suggested' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  )
+  await expect(dialog).toContainText('Select a location to show the folder path')
+  await expect(dialog.getByRole('option', { name: /^Archive/ })).toContainText('Private')
+  await dialog.getByRole('option', { name: /^Archive/ }).click()
+  await expect(dialog).toContainText('Move to: Private › Archive')
+
+  await dialog.getByRole('tab', { name: 'Starred' }).click()
+  await expect(dialog.getByRole('option')).toHaveCount(1)
+  await expect(dialog.getByRole('option', { name: /^Photos/ })).toBeVisible()
+
+  await dialog.getByRole('button', { name: 'Search' }).click()
+  await dialog.getByRole('textbox', { name: 'Search folders' }).fill('arch')
+  await expect(dialog.getByRole('option')).toHaveCount(1)
+  await dialog.getByRole('option', { name: /^Archive/ }).click()
+  await dialog.getByRole('button', { name: 'Move', exact: true }).click()
+
+  await expect(row(page, 'report.txt')).toHaveCount(0)
+  await row(page, 'Archive').dblclick()
+  await expect(row(page, 'report.txt')).toBeVisible()
 })

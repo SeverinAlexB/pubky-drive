@@ -8,6 +8,7 @@ import {
   AREA_LABELS,
   folderLabel,
   folderRoute,
+  isAreaRoot,
   locate,
   matchingFolderInOtherArea,
 } from '../../app/locations'
@@ -221,6 +222,17 @@ export function useItemActions() {
       return binned
     }
 
+    /** "‘a.txt’ moved from ‘Work’ to ‘Archive’", naming folders as Drive does. */
+    function movedMessage(items: readonly DriveItem[], target: StoragePath) {
+      const shortName = (folder: StoragePath) =>
+        isAreaRoot(folder) ? folderLabel(folder) : nameOf(folder)
+      const source = parentOf(items[0].path)
+      const from = items.every((item) => parentOf(item.path) === source)
+        ? ` from ‘${shortName(source)}’`
+        : ''
+      return `${plural(items)} moved${from} to ‘${shortName(target)}’`
+    }
+
     /** Asks before private items are pasted into a public folder. */
     async function confirmBecomingPublic(items: readonly DriveItem[], target: StoragePath) {
       if (areaOfPath(target) !== 'public' || items.every((item) => item.area === 'public'))
@@ -344,7 +356,7 @@ export function useItemActions() {
         try {
           const moved = await run('Moving', (onProgress) => moveEach(movable, target, onProgress))
           offerUndo(
-            `${plural(movable)} moved to ‘${folderLabel(target)}’`,
+            movedMessage(movable, target),
             movesBack(moved.map(({ from, to }) => ({ from: from.path, to }))),
           )
         } catch (error) {

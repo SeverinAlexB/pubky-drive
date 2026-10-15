@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronRight, LoaderCircle } from 'lucide-react'
+import { ArrowLeft, ChevronRight, LoaderCircle, Search, X } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { useDrive } from '../../app/DriveContext'
 import { useLoad } from '../../app/useLoad'
@@ -8,7 +8,10 @@ import { describeError } from '../../drive/errors'
 import type { DriveItem } from '../../drive/items'
 import { areaOfPath, isWithin, nameOf, parentOf, type StoragePath } from '../../drive/paths'
 import { Dialog } from '../../ui/Dialog'
+import { sleep } from '../../pubky/backoff'
 import { FileIcon } from '../../ui/FileIcon'
+import { matchByName } from '../search/search'
+import { starredFolders, suggestedFolders } from './moveTargets'
 import './MoveDialog.css'
 
 interface MoveDialogProps {
@@ -20,9 +23,22 @@ interface MoveDialogProps {
 /** `undefined` browses the top level, where the two areas are listed. */
 type Browsed = StoragePath | undefined
 
+type Tab = 'suggested' | 'starred' | 'all'
+
+const HISTORY_WAIT_MS = 2000
+
+const TABS: { tab: Tab; label: string }[] = [
+  { tab: 'suggested', label: 'Suggested' },
+  { tab: 'starred', label: 'Starred' },
+  { tab: 'all', label: 'All locations' },
+]
+
 /** Chooses a destination folder. See docs/spec/06-organise.md, "Move". */
 export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
-  const { drive, access } = useDrive()
+  const { drive, access, events, starred, loadSearchIndex } = useDrive()
+  const [tab, setTab] = useState<Tab>('suggested')
+  /** The search field's text; `undefined` while the field is closed. */
+  const [query, setQuery] = useState<string>()
   const currentFolder = parentOf(items[0].path)
   const [browsed, setBrowsed] = useState<Browsed>(
     isAreaRoot(currentFolder) ? undefined : parentOf(currentFolder),
@@ -31,19 +47,53 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
   const [moveError, setMoveError] = useState<string>()
   const [busy, setBusy] = useState(false)
 
-  const loadFolders = useCallback(async () => {
-    if (browsed === undefined) return topLevelFolders(access)
-    return (await drive.listFolder(browsed)).filter((item) => item.kind === 'folder')
-  }, [browsed, drive, access])
+  const searching = query !== undefined && query.trim() !== ''
+  const loadFolders = useCallback(async (): Promise<FolderOption[]> => {
+    if (tab === 'all' && !searching) {
+      if (browsed === undefined) return topLevelFolders(access)
+      return (await drive.listFolder(browsed)).filter((item) => item.kind === 'folder')
+    }
+    // The other lists come from every Drive folder, which search keeps cached.
+    const everyFolder = (await loadSearchIndex()).filter((item) => item.kind === 'folder')
+    let folders = matchByName(everyFolder, query ?? '')
+    if (!searching && tab === 'starred') folders = starredFolders(starred, everyFolder)
+    if (!searching && tab === 'suggested') {
+      // The history may still wait for the homeserver's rate limit; suggest from what's known.
+      await Promise.race([events.ready, sleep(HISTORY_WAIT_MS)])
+      folders = suggestedFolders(events.history(), everyFolder, currentFolder)
+    }
+    return folders.map((folder) => ({ ...folder, location: folderLabel(parentOf(folder.path)) }))
+  }, [
+    tab,
+    searching,
+    query,
+    browsed,
+    access,
+    drive,
+    loadSearchIndex,
+    starred,
+    events,
+    currentFolder,
+  ])
   const { data: folders, error: listError } = useLoad(loadFolders)
   const error = moveError ?? listError
+  const browsing = tab === 'all' && !searching
 
   const browse = (folder: Browsed) => {
+    setTab('all')
+    setQuery(undefined)
     setBrowsed(folder)
     setSelected(undefined)
   }
 
-  const target = selected ?? browsed
+  const showTab = (next: Tab) => {
+    setTab(next)
+    setQuery(undefined)
+    setSelected(undefined)
+  }
+
+  // Browsing a folder offers it as the target; the other lists need a choice.
+  const target = selected ?? (browsing ? browsed : undefined)
   const problem = target && moveProblem(items, target, access)
   const crossesAreas = target && items.some((item) => areaOfPath(item.path) !== areaOfPath(target))
 
@@ -88,32 +138,102 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
       <p className="move-current">
         Current location: <span className="move-chip">{folderLabel(currentFolder)}</span>
       </p>
+      <div className="move-tabs">
+        {query === undefined ? (
+          <>
+            <div role="tablist" aria-label="Locations">
+              {TABS.map(({ tab: each, label }) => (
+                <button
+                  key={each}
+                  type="button"
+                  role="tab"
+                  aria-selected={tab === each}
+                  className="move-tab"
+                  onClick={() => showTab(each)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="icon-button small"
+              aria-label="Search"
+              onClick={() => setQuery('')}
+            >
+              <Search size={20} />
+            </button>
+          </>
+        ) : (
+          <div className="move-search">
+            <Search size={20} aria-hidden />
+            <input
+              autoFocus
+              aria-label="Search folders"
+              placeholder="Search folders"
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value)
+                setSelected(undefined)
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Escape') {
+                  event.preventDefault()
+                  setQuery(undefined)
+                }
+                // Enter picks a folder from the list, not the dialog's Move button.
+                if (event.key === 'Enter') event.preventDefault()
+              }}
+            />
+            <button
+              type="button"
+              className="icon-button small"
+              aria-label="Close search"
+              onClick={() => setQuery(undefined)}
+            >
+              <X size={20} />
+            </button>
+          </div>
+        )}
+      </div>
       <div className="move-browser">
-        <div className="move-browser-header">
-          <button
-            type="button"
-            className="icon-button small"
-            aria-label="Back"
-            disabled={browsed === undefined}
-            onClick={goUp}
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <strong>
-            {browsed === undefined
-              ? 'My Drive'
-              : isAreaRoot(browsed)
-                ? folderLabel(browsed)
-                : nameOf(browsed)}
-          </strong>
-        </div>
+        {browsing && (
+          <div className="move-browser-header">
+            <button
+              type="button"
+              className="icon-button small"
+              aria-label="Back"
+              disabled={browsed === undefined}
+              onClick={goUp}
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <strong>
+              {browsed === undefined
+                ? 'My Drive'
+                : isAreaRoot(browsed)
+                  ? folderLabel(browsed)
+                  : nameOf(browsed)}
+            </strong>
+          </div>
+        )}
         <ul className="move-folders" role="listbox" aria-label="Folders">
           {folders === undefined && !error && (
             <li className="move-placeholder">
               <LoaderCircle className="spinner" size={20} /> Loading…
             </li>
           )}
-          {folders?.length === 0 && <li className="move-placeholder">No folders</li>}
+          {folders?.length === 0 && (
+            <li className="move-placeholder">
+              {searching
+                ? 'No folders match your search'
+                : tab === 'suggested'
+                  ? 'No suggestions yet'
+                  : tab === 'starred'
+                    ? 'No starred folders'
+                    : 'No folders'}
+            </li>
+          )}
           {folders?.map((folder) => {
             // A folder that can't be the target can still be opened to move into a subfolder.
             const unselectable = Boolean(moveProblem(items, folder.path, access))
@@ -135,7 +255,12 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
                 }}
               >
                 <FileIcon item={folder} areaRoot={area} />
-                <span className="move-folder-name">{folder.name}</span>
+                <span className="move-folder-name">
+                  {folder.name}
+                  {folder.location && (
+                    <span className="move-folder-location">{folder.location}</span>
+                  )}
+                </span>
                 <button
                   type="button"
                   className="icon-button small"
@@ -153,7 +278,7 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
         </ul>
       </div>
       <p className="move-target">
-        {target ? <>Move to: {folderLabel(target)}</> : 'Select a folder'}
+        {target ? <>Move to: {folderLabel(target)}</> : 'Select a location to show the folder path'}
       </p>
       {problem && <p className="field-error">{problem}</p>}
       {!problem && crossesAreas && (
@@ -167,6 +292,9 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
     </Dialog>
   )
 }
+
+/** A folder in the list, with its location when the list mixes folders from many places. */
+type FolderOption = DriveItem & { location?: string }
 
 /** Why the items can't move into `target`, or `undefined` when they can. */
 function moveProblem(items: DriveItem[], target: StoragePath, access: DriveAccess) {

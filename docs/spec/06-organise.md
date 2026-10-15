@@ -36,15 +36,30 @@ Creates "Copy of name" in the same folder (with a number if taken). Snackbar:
 
 - Dialog "Move ‘name’" (or "Move N items"):
   - "Current location:" followed by a chip with the folder name.
-  - A folder browser starting in the current folder's parent: a back arrow and
-    the browsed folder's name at the top, then its subfolders. A single click
-    selects a folder; a double click, or the › button at the row's end, opens it.
-  - "Move to: <path>" under the list, for the selected or browsed folder.
+  - Tabs **Suggested** (selected when the dialog opens), **Starred** and **All
+    locations**, and a **Search** button.
+    - Suggested: up to 8 Drive folders where files were written most recently,
+      from the session's event history, filled up with the folders next to the
+      moved items.
+    - Starred: the starred folders, by name.
+    - All locations: a folder browser starting in the current folder's parent,
+      with a back arrow and the browsed folder's name at the top, then its
+      subfolders.
+    - Search replaces the tabs with a field ("Search folders") that lists Drive
+      folders whose name contains the text. Esc or × closes it.
+  - Folders in Suggested, Starred and search results show their location under
+    the name. A single click selects a folder; a double click, or the › button
+    at the row's end, opens it in All locations.
+  - "Move to: <path>" under the list, for the selected folder or, in All
+    locations, the browsed one. Otherwise: "Select a location to show the
+    folder path".
   - **Cancel** and **Move**. Move is disabled when the target is the current
     location, or is inside the moved folder.
 - Moving between the Public and Private areas warns what changes, for example:
   "These files will become public. Anyone with the address can read them."
-- Snackbar: "‘name’ moved to ‘folder’" with **Undo**.
+- Snackbar: "‘name’ moved from ‘source’ to ‘target’" with **Undo**, naming the
+  folders (or the area, for an area root). Items from different folders: "N
+  items moved to ‘target’".
 
 ## Drag and drop
 

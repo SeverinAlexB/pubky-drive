@@ -66,6 +66,7 @@ test('manage access changes other apps’ files, and moving them into the Drive 
 
   await contextMenu(page, 'other-app.json', 'Organise', 'Move')
   const move = page.getByRole('dialog', { name: 'Move ‘other-app.json’' })
+  await move.getByRole('tab', { name: 'All locations' }).click()
   await move.getByRole('option', { name: /^Private/ }).click()
   await move.getByRole('button', { name: 'Move' }).click()
   const confirm = page.getByRole('dialog', { name: 'Move into your Drive?' })
