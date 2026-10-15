@@ -17,6 +17,10 @@ export const HTTP_RELAY =
   (IS_TESTNET ? `http://${TESTNET_HOST ?? 'localhost'}:15412/inbox/` : undefined)
 export const STORAGE_NAMESPACE = import.meta.env.VITE_PUBKY_STORAGE_NAMESPACE?.trim() || undefined
 
+/** Development only: the request counter at the bottom of the window (`src/dev/`). */
+export const SHOW_REQUEST_MONITOR =
+  import.meta.env.DEV && import.meta.env.VITE_SHOW_REQUEST_MONITOR !== 'false'
+
 export const SHOW_DEVELOPMENT_SIGNUP =
   import.meta.env.DEV && IS_TESTNET && import.meta.env.VITE_SHOW_DEVELOPMENT_SIGNUP !== 'false'
 

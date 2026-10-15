@@ -1,6 +1,14 @@
 import type { Session } from '@synonymdev/pubky'
 import { LoaderCircle } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { SHOW_REQUEST_MONITOR } from '../config'
+
+// Loaded only in development, so production bundles contain neither its code nor its styles.
+const RequestMonitor = import.meta.env.DEV
+  ? lazy(() =>
+      import('../dev/RequestMonitor').then((module) => ({ default: module.RequestMonitor })),
+    )
+  : () => null
 import { describeError } from '../drive/errors'
 import { SignInPage } from '../features/auth/SignInPage'
 import { PublicViewer } from '../features/sharing/PublicViewer'
@@ -19,6 +27,11 @@ export function App() {
   return (
     <SnackbarProvider>
       {route.view === 'viewer' ? <PublicViewer address={route.address} /> : <SessionGate />}
+      {SHOW_REQUEST_MONITOR && (
+        <Suspense>
+          <RequestMonitor />
+        </Suspense>
+      )}
     </SnackbarProvider>
   )
 }
