@@ -63,10 +63,11 @@ other apps' data. See docs/design.md, "Two sections" and "Access levels".
   homeserver", a short explanation, and the buttons **View all files**
   (filled) and **Manage all files** (outlined). Each opens the access dialog
   (see 11) with that level chosen.
-- **With access:** `/pub` and `/priv` as folders. Every listing has a yellow
-  banner: "You're browsing all files on your homeserver. Files outside Pubky
-  Drive belong to other apps; changing them can break those apps." With View
-  access it adds "View only" and an **Allow changes** button.
+- **With access:** `/pub` and `/priv` as folders. With View access, a quiet
+  note in grey above every listing says "View only: you can open and download
+  these files, but not change them.", with an **Allow changes** button. With
+  Manage access there is no note; changes ask instead (see "Changing other
+  apps' files").
 - Listings show exactly what is stored, including what Pubky Drive hides: folder
   markers (`.keep`), and Pubky Drive's `app/` and `bin/` folders. Everything
   can be changed by hand with Manage access.
@@ -76,9 +77,6 @@ other apps' data. See docs/design.md, "Two sections" and "Access levels".
   details pane says what the bin, the app data and a folder marker are for
   ("Keeps this folder when it has no other files. Deleting it removes an
   empty folder.").
-- Inside `/pub/pubky-drive/` and `/priv/pubky-drive/` a second banner says:
-  "Pubky Drive manages this folder. Changing `bin/` or `app/` can break the bin
-  and starred items; changing `files/` here is the same as in Pubky Drive."
 - Navigation stays in the Homeserver section: opening `files/`, the
   breadcrumb, ⌥↑ and the details pane's location never switch to Pubky Drive.
 - With View access, items outside Pubky Drive can be opened, previewed,
@@ -87,3 +85,27 @@ other apps' data. See docs/design.md, "Two sections" and "Access levels".
   Drive area.
 - Moving items between Pubky Drive and the rest of the homeserver asks first:
   "Move into your Drive?" or "Move out of your Drive?".
+
+### Changing other apps' files
+
+The first change to another app's files asks, once per app folder until
+sign-out. The app folder is the first folder under `/pub/` or `/priv/`, such
+as `pubky.app`.
+
+- Changes are: upload, new folder, rename, make a copy, move (the items and
+  the target folder), paste, drag and drop, move to bin and delete forever.
+- Dialog "Change pubky.app’s files?": "These files belong to pubky.app.
+  Renaming, moving or deleting them can break that app. Pubky Drive won’t ask
+  again for pubky.app until you sign out." Buttons **Cancel** and
+  **Continue**. Cancel changes nothing.
+- Files directly in `/pub` or `/priv`: "Change files at the top of /pub?".
+  Several apps at once: "Change other apps’ files?", naming them.
+- Pubky Drive's own data (its bin, settings and Drive folders, but not the
+  files inside the Drive folders): "Change Pubky Drive’s own data?", saying
+  that changing it by hand can break the bin and starred items.
+- Never asks for files inside `/pub/pubky-drive/files/` and
+  `/priv/pubky-drive/files/`, or for putting items into these folders: that is
+  the same as working in the Pubky Drive section.
+- Moving items between the Pubky Drive section and other apps' folders
+  already asks ("Move into your Drive?"); that answer also counts as
+  confirming the app.

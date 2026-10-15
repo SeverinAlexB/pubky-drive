@@ -13,6 +13,29 @@ function sidebar(page: Page) {
   return page.getByRole('navigation', { name: 'Folders and views' })
 }
 
+/** Chooses files in New › File upload, without waiting for the upload. */
+async function chooseFiles(page: Page, names: string[]) {
+  await page.getByRole('button', { name: 'New' }).click()
+  const chooser = page.waitForEvent('filechooser')
+  await page.getByRole('menuitem', { name: 'File upload' }).click()
+  await (
+    await chooser
+  ).setFiles(names.map((name) => ({ name, mimeType: 'text/plain', buffer: Buffer.from(name) })))
+}
+
+/** The question before the first change to an app's files, by its title. */
+function changeQuestion(page: Page, title: string) {
+  return page.getByRole('dialog', { name: title })
+}
+
+async function grantManageAccess(page: Page) {
+  await sidebar(page)
+    .getByRole('link', { name: /Homeserver/ })
+    .click()
+  await page.getByRole('button', { name: 'Manage all files' }).click()
+  await grantHomeserverAccess(page, 'Manage all files')
+}
+
 test('sign-in asks only for the Drive folder; the Homeserver section asks for more', async ({
   page,
 }) => {
@@ -67,7 +90,10 @@ test('manage access changes other apps’ files, and moving them into the Drive 
   await grantHomeserverAccess(page, 'Manage all files')
 
   await sidebar(page).getByRole('link', { name: '/pub', exact: true }).click()
-  await uploadFiles(page, [{ name: 'other-app.json', text: '{}' }])
+  await chooseFiles(page, ['other-app.json'])
+  await changeQuestion(page, 'Change files at the top of /pub?')
+    .getByRole('button', { name: 'Continue' })
+    .click()
   await expect(row(page, 'other-app.json')).toBeVisible()
 
   await contextMenu(page, 'other-app.json', 'Organise', 'Move')
@@ -120,9 +146,6 @@ test('the Homeserver section lists everything stored, with the app’s folders e
   await sidebar(page).getByRole('link', { name: '/priv', exact: true }).click()
   await row(page, 'pubky-drive').dblclick()
 
-  await expect(
-    page.getByRole('note').filter({ hasText: 'Pubky Drive manages this folder' }),
-  ).toBeVisible()
   await expect(row(page, 'bin')).toContainText('Bin')
   await expect(row(page, 'app')).toContainText('App data')
   await expect(row(page, 'files')).toContainText('Pubky Drive files')
@@ -144,4 +167,59 @@ test('the Homeserver section lists everything stored, with the app’s folders e
   await row(page, 'content').dblclick()
   await expect(row(page, 'binned.txt')).toBeVisible()
   await expect(page).toHaveURL(/#\/homeserver\/private\/pubky-drive\/bin\/.+\/content$/)
+})
+
+test('manage access asks once per app before its files change, and never for Drive files', async ({
+  page,
+}) => {
+  await signUp(page)
+  await openArea(page, 'Private')
+  await uploadFiles(page, [{ name: 'first.txt', text: 'f' }])
+  await grantManageAccess(page)
+  await sidebar(page).getByRole('link', { name: '/pub', exact: true }).click()
+  // Browsing with Manage access shows no warning.
+  await expect(page.getByRole('note')).toHaveCount(0)
+
+  await page.keyboard.press('Shift+N')
+  await changeQuestion(page, 'Change files at the top of /pub?')
+    .getByRole('button', { name: 'Continue' })
+    .click()
+  await page.getByRole('textbox', { name: 'Name' }).fill('pubky.app')
+  await page.getByRole('button', { name: 'Create' }).click()
+  await row(page, 'pubky.app').dblclick()
+
+  // Cancel changes nothing, and the question comes again next time.
+  await chooseFiles(page, ['post.json'])
+  const question = changeQuestion(page, 'Change pubky.app’s files?')
+  await expect(question).toContainText('can break that app')
+  await question.getByRole('button', { name: 'Cancel' }).click()
+  await expect(question).toHaveCount(0)
+  await expect(row(page, 'post.json')).toHaveCount(0)
+  await chooseFiles(page, ['post.json'])
+  await question.getByRole('button', { name: 'Continue' }).click()
+  await expect(row(page, 'post.json')).toBeVisible()
+
+  // Confirmed for this app until sign-out: renaming doesn't ask.
+  await contextMenu(page, 'post.json', 'Rename')
+  await page.getByRole('textbox', { name: 'Name' }).fill('renamed.json')
+  await page.getByRole('button', { name: 'OK' }).click()
+  await expect(row(page, 'renamed.json')).toBeVisible()
+
+  // The Drive's files, seen from the Homeserver section, never ask.
+  await sidebar(page).getByRole('link', { name: '/priv', exact: true }).click()
+  await row(page, 'pubky-drive').dblclick()
+  await row(page, 'files').dblclick()
+  await uploadFiles(page, [{ name: 'mine.txt', text: 'm' }])
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+
+  // Pubky Drive's own data asks with its own words.
+  await page
+    .getByRole('navigation', { name: 'Folder path' })
+    .getByRole('button', { name: 'pubky-drive' })
+    .click()
+  await row(page, 'files').click()
+  await page.keyboard.press('F2')
+  await expect(changeQuestion(page, 'Change Pubky Drive’s own data?')).toContainText(
+    'can break the bin and starred items',
+  )
 })

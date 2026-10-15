@@ -43,6 +43,7 @@ import { copyText } from '../sharing/clipboard'
 import { viewerLink } from '../sharing/links'
 import { ShareDialog } from '../sharing/ShareDialog'
 import { followMove, forgetRemoved } from '../starred/starred'
+import { useConfirmHomeserverChange } from '../homeserver/useConfirmHomeserverChange'
 import { useActionHistory } from './ActionHistoryProvider'
 import type { Undoable } from './history'
 
@@ -55,6 +56,7 @@ export function useItemActions() {
   const { openDialog } = useDialogHost()
   const confirm = useConfirm()
   const { history, clipboard } = useActionHistory()
+  const homeserverChanges = useConfirmHomeserverChange()
 
   return useMemo(() => {
     /**
@@ -281,7 +283,8 @@ export function useItemActions() {
     }
 
     const actions = {
-      newFolder(parent: StoragePath) {
+      async newFolder(parent: StoragePath) {
+        if (!(await homeserverChanges.confirmChange({ into: [parent] }))) return
         openDialog((close) => (
           <NameDialog
             title="New folder"
@@ -297,7 +300,8 @@ export function useItemActions() {
         ))
       },
 
-      rename(item: DriveItem) {
+      async rename(item: DriveItem) {
+        if (!(await homeserverChanges.confirmChange({ items: [item.path] }))) return
         openDialog((close) => (
           <NameDialog
             title="Rename"
@@ -322,8 +326,9 @@ export function useItemActions() {
         ))
       },
 
-      makeCopy(item: DriveItem) {
-        return attempt(async () => {
+      async makeCopy(item: DriveItem) {
+        if (!(await homeserverChanges.confirmChange({ into: [parentOf(item.path)] }))) return
+        await attempt(async () => {
           const copies = await run('Copying', (onProgress) =>
             copyEach(
               [{ item, target: parentOf(item.path), name: copyName(item.name) }],
@@ -352,7 +357,15 @@ export function useItemActions() {
       ) {
         const movable = items.filter((item) => parentOf(item.path) !== target)
         if (movable.length === 0) return
-        if (!(await confirmSectionChange(movable, target))) return
+        const change = { items: movable.map((item) => item.path), into: [target] }
+        const targetScope = locate(target).scope
+        if (movable.some((item) => locate(item.path).scope !== targetScope)) {
+          // Asking about the section change already says that apps won't find the items.
+          if (!(await confirmSectionChange(movable, target))) return
+          homeserverChanges.remember(change)
+        } else if (!(await homeserverChanges.confirmChange(change))) {
+          return
+        }
         try {
           const moved = await run('Moving', (onProgress) => moveEach(movable, target, onProgress))
           offerUndo(
@@ -389,6 +402,8 @@ export function useItemActions() {
       },
 
       async moveToBin(items: DriveItem[]) {
+        if (!(await homeserverChanges.confirmChange({ items: items.map((item) => item.path) })))
+          return
         if (!access.appData) {
           await actions.deleteForever(items)
           return
@@ -400,6 +415,8 @@ export function useItemActions() {
       },
 
       async deleteForever(items: DriveItem[]) {
+        if (!(await homeserverChanges.confirmChange({ items: items.map((item) => item.path) })))
+          return
         const confirmed = await confirm({
           title: 'Delete forever?',
           message: `${plural(items)} will be deleted forever. This can’t be undone.`,
@@ -442,6 +459,8 @@ export function useItemActions() {
         if (area === item.area) return false
         const target = matchingFolderInOtherArea(item.path)
         if (!canWrite(access, item.path) || !canWrite(access, target)) return false
+        if (!(await homeserverChanges.confirmChange({ items: [item.path], into: [target] })))
+          return false
         const confirmed = await confirm(
           area === 'public'
             ? {
@@ -516,6 +535,8 @@ export function useItemActions() {
       async paste(target: StoragePath) {
         const pending = clipboard.current
         if (!pending || !canWrite(access, target)) return
+        const moved = pending.mode === 'cut' ? pending.items.map((item) => item.path) : []
+        if (!(await homeserverChanges.confirmChange({ items: moved, into: [target] }))) return
         if (!(await confirmBecomingPublic(pending.items, target))) return
         if (pending.mode === 'cut') {
           // Cut items move once; pasting again does nothing.
@@ -614,5 +635,6 @@ export function useItemActions() {
     confirm,
     history,
     clipboard,
+    homeserverChanges,
   ])
 }

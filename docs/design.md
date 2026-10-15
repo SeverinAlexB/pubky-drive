@@ -118,9 +118,9 @@ folder, `/priv/pubky-drive/`:
 
 Pubky Drive never lists `app/` or `bin/`, because they're outside the Drive
 folders. The Homeserver section lists them like any other folder, with "App
-data" and "Bin" badges and a second banner inside `/pub/pubky-drive/` and
-`/priv/pubky-drive/`: changing them by hand can break the bin and starred
-items. Pubky Drive skips bin entries whose record it can't read. Starred items
+data" and "Bin" badges. Changing them by hand asks first, because it can
+break the bin and starred items; the same question protects other apps' folders
+(`src/features/homeserver/`). Pubky Drive skips bin entries whose record it can't read. Starred items
 can be anywhere, including the Homeserver section; Restore only writes inside
 the areas the session can access.
 

@@ -9,6 +9,7 @@ import {
 } from 'react'
 import { useDrive } from '../../app/DriveContext'
 import { LARGE_FILE_BYTES } from '../../config'
+import { useConfirmHomeserverChange } from '../homeserver/useConfirmHomeserverChange'
 import { describeError } from '../../drive/errors'
 import type { StoragePath } from '../../drive/paths'
 import { useConfirm } from '../../ui/Dialog'
@@ -43,6 +44,7 @@ export function UploadsProvider({ children }: { children: ReactNode }) {
   const { drive, markChanged } = useDrive()
   const { notify } = useNotifier()
   const confirm = useConfirm()
+  const homeserverChanges = useConfirmHomeserverChange()
   const [rows, setRows] = useState<UploadRow[]>([])
   const rowsRef = useRef<UploadRow[]>([])
   const running = useRef(0)
@@ -90,6 +92,7 @@ export function UploadsProvider({ children }: { children: ReactNode }) {
 
   const planAndQueue = useCallback(
     async (folder: StoragePath, chosen: ChosenFile[]) => {
+      if (!(await homeserverChanges.confirmChange({ into: [folder] }))) return
       let planned: PlannedUpload[]
       try {
         const pending = rowsRef.current
@@ -125,7 +128,7 @@ export function UploadsProvider({ children }: { children: ReactNode }) {
       updateRows((current) => [...(finished ? [] : current), ...added])
       pump()
     },
-    [drive, notify, confirm, updateRows, pump],
+    [drive, notify, confirm, homeserverChanges, updateRows, pump],
   )
 
   const uploadChosen = useCallback(

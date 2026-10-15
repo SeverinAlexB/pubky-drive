@@ -24,7 +24,7 @@ Shown when no session is saved:
 
 ## Access dialog
 
-Opened from the Homeserver section, the banner's **Allow changes**, or
+Opened from the Homeserver section, the View only note's **Allow changes**, or
 **Change access…** in the account menu. Title: "What Pubky Drive can access".
 
 1. A choice of three cards, the current one marked "(current)":

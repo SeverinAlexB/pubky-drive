@@ -9,17 +9,13 @@ import { useViewPreferences } from '../../app/viewPreferences'
 import { APP_ID } from '../../config'
 import { APP_DATA_ROOT, canWrite, DRIVE_ROOTS, HOMESERVER_ROOTS } from '../../drive/access'
 import { itemFromPath } from '../../drive/items'
-import { isWithin, nameOf, parentOf, type Area, type StoragePath } from '../../drive/paths'
+import { nameOf, parentOf, type Area, type StoragePath } from '../../drive/paths'
 import { FOLDER_MARKER } from '../../drive/names'
 import { BIN_ROOT } from '../bin/bin'
 import { Menu, separator, type MenuEntry } from '../../ui/Menu'
 import { itemMenuEntries, newMenuEntries } from '../actions/menus'
 import { useItemActions } from '../actions/useItemActions'
-import {
-  AppFolderBanner,
-  HomeserverBanner,
-  HomeserverLocked,
-} from '../homeserver/HomeserverNotices'
+import { HomeserverAccessNote, HomeserverLocked } from '../homeserver/HomeserverNotices'
 import { useUploads } from '../upload/UploadsProvider'
 import { useDropTarget } from './dragAndDrop'
 import { ItemBrowser } from './ItemBrowser'
@@ -96,14 +92,7 @@ export function FolderView({ scope, area, folder }: FolderViewProps) {
       columns="owner"
       folder={writable ? path : undefined}
       onGoUp={goUp}
-      banner={
-        scope === 'homeserver' ? (
-          <>
-            <HomeserverBanner />
-            {isWithinAppFolder(path) && <AppFolderBanner />}
-          </>
-        ) : undefined
-      }
+      banner={scope === 'homeserver' ? <HomeserverAccessNote /> : undefined}
       emptyState={
         writable ? (
           <>
@@ -120,10 +109,6 @@ export function FolderView({ scope, area, folder }: FolderViewProps) {
 
 const APP_FOLDERS: StoragePath[] = [`/pub/${APP_ID}/`, `/priv/${APP_ID}/`]
 const APP_SETTINGS_ROOT: StoragePath = `${APP_DATA_ROOT}app/`
-
-function isWithinAppFolder(path: StoragePath) {
-  return APP_FOLDERS.some((folder) => isWithin(path, folder))
-}
 
 /**
  * An item as the Homeserver section shows it: its folders open in this section, and the app's

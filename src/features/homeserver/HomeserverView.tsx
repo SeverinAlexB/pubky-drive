@@ -4,7 +4,7 @@ import { HOMESERVER_AREA_LABELS } from '../../app/locations'
 import { HOMESERVER_ROOTS } from '../../drive/access'
 import { ItemBrowser } from '../browse/ItemBrowser'
 import type { ListItem } from '../browse/listItem'
-import { HomeserverBanner, HomeserverLocked } from './HomeserverNotices'
+import { HomeserverAccessNote, HomeserverLocked } from './HomeserverNotices'
 
 /** The Homeserver section: `/pub` and `/priv`, or the request for access. See docs/spec/02-navigation.md. */
 export function HomeserverView() {
@@ -35,7 +35,7 @@ export function HomeserverView() {
       title={<h1>Homeserver</h1>}
       items={items}
       columns="owner"
-      banner={<HomeserverBanner />}
+      banner={<HomeserverAccessNote />}
       emptyState={<HomeserverLocked />}
     />
   )

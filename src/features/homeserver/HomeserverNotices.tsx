@@ -1,47 +1,29 @@
-import { Eye, PencilLine, ServerCog, TriangleAlert } from 'lucide-react'
+import { Eye, PencilLine, ServerCog } from 'lucide-react'
 import { useDrive } from '../../app/DriveContext'
 import { homeserverLevel } from '../../drive/access'
 import { useAccessDialog } from '../access/AccessDialog'
 import './HomeserverNotices.css'
 
-/** The warning above every Homeserver listing. */
-export function HomeserverBanner() {
+/**
+ * With View access, a quiet note above Homeserver listings, with a way to allow changes. With
+ * Manage access there is none: the first change to another app's files asks instead.
+ */
+export function HomeserverAccessNote() {
   const { access } = useDrive()
   const openAccessDialog = useAccessDialog()
-  const level = homeserverLevel(access)
+  if (homeserverLevel(access) !== 'view') return null
 
   return (
-    <div className="homeserver-banner" role="note">
-      <TriangleAlert size={20} aria-hidden />
-      <p>
-        You’re browsing all files on your homeserver. Files outside Pubky Drive belong to other
-        apps; changing them can break those apps.{' '}
-        {level === 'view' && (
-          <strong>View only: you can open and download files, but not change them.</strong>
-        )}
-      </p>
-      {level === 'view' && (
-        <button
-          type="button"
-          className="button button-text"
-          onClick={() => openAccessDialog('manage')}
-        >
-          Allow changes
-        </button>
-      )}
-    </div>
-  )
-}
-
-/** The second warning inside Pubky Drive's own folders, where the bin and settings are. */
-export function AppFolderBanner() {
-  return (
-    <div className="homeserver-banner" role="note">
-      <TriangleAlert size={20} aria-hidden />
-      <p>
-        Pubky Drive manages this folder. Changing <code>bin/</code> or <code>app/</code> can break
-        the bin and starred items; changing <code>files/</code> here is the same as in Pubky Drive.
-      </p>
+    <div className="homeserver-note" role="note">
+      <Eye size={18} aria-hidden />
+      <p>View only: you can open and download these files, but not change them.</p>
+      <button
+        type="button"
+        className="button button-text"
+        onClick={() => openAccessDialog('manage')}
+      >
+        Allow changes
+      </button>
     </div>
   )
 }
