@@ -121,3 +121,67 @@ test('keyboard: arrows select, Enter opens a folder, Alt+Up goes back', async ({
   await page.keyboard.press('Alt+ArrowUp')
   await expect(row(page, 'Archive')).toBeVisible()
 })
+
+test('copy and paste into another folder, then undo and redo with the keyboard', async ({
+  page,
+}) => {
+  await createFolder(page, 'Target')
+
+  await row(page, 'report.txt').click()
+  await page.keyboard.press('Meta+c')
+  await expect(page.getByRole('status')).toContainText('Item copied to clipboard')
+  await row(page, 'Target').dblclick()
+  await expect(page.getByRole('navigation', { name: 'Folder path' })).toContainText('Target')
+  await page.keyboard.press('Meta+v')
+  await expect(page.getByRole('status')).toContainText('Created ‘Copy of report.txt’')
+  await expect(row(page, 'Copy of report.txt')).toBeVisible()
+
+  await page.keyboard.press('Meta+z')
+  await expect(page.getByRole('status')).toContainText('Action undone')
+  await expect(row(page, 'Copy of report.txt')).toHaveCount(0)
+  await page.keyboard.press('Meta+y')
+  await expect(page.getByRole('status')).toContainText('Action redone')
+  await expect(row(page, 'Copy of report.txt')).toBeVisible()
+})
+
+test('cut and paste moves the item once, and undo moves it back', async ({ page }) => {
+  await createFolder(page, 'Target')
+
+  await row(page, 'notes.md').click()
+  await page.keyboard.press('Meta+x')
+  await expect(page.getByRole('status')).toContainText('Item cut to clipboard')
+  await row(page, 'Target').dblclick()
+  await expect(page.getByRole('navigation', { name: 'Folder path' })).toContainText('Target')
+  await page.keyboard.press('Meta+v')
+  await expect(page.getByRole('status')).toContainText('‘notes.md’ moved to ‘Private › Target’')
+  await expect(row(page, 'notes.md')).toBeVisible()
+  await page.keyboard.press('Meta+v')
+  await expect(row(page, 'notes.md')).toHaveCount(1)
+
+  await page.keyboard.press('Meta+z')
+  await expect(page.getByRole('status')).toContainText('Action undone')
+  await expect(row(page, 'notes.md')).toHaveCount(0)
+  await page
+    .getByRole('navigation', { name: 'Folder path' })
+    .getByRole('button', { name: 'Private' })
+    .click()
+  await expect(row(page, 'notes.md')).toBeVisible()
+})
+
+test('undo goes back through several actions, newest first', async ({ page }) => {
+  await uploadFiles(page, [{ name: 'a.txt', text: 'a' }])
+
+  await contextMenu(page, 'a.txt', 'Rename')
+  await page.getByRole('textbox', { name: 'Name' }).fill('b.txt')
+  await page.getByRole('button', { name: 'OK' }).click()
+  await expect(row(page, 'b.txt')).toBeVisible()
+  await row(page, 'b.txt').click()
+  await page.keyboard.press('Delete')
+  await expect(row(page, 'b.txt')).toHaveCount(0)
+
+  await page.keyboard.press('Meta+z')
+  await expect(row(page, 'b.txt')).toBeVisible()
+  await page.keyboard.press('Meta+z')
+  await expect(row(page, 'a.txt')).toBeVisible()
+  await expect(row(page, 'b.txt')).toHaveCount(0)
+})

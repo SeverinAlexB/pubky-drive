@@ -46,6 +46,8 @@ import { useSelection } from './selection'
 import { DEFAULT_SORT, sortItems, type SortKey, type SortOrder } from './sorting'
 import './ItemBrowser.css'
 
+const IS_MAC = /Mac|iPhone|iPad/.test(navigator.platform)
+
 interface ItemBrowserProps {
   /** The title row content: a heading or breadcrumbs. */
   title: ReactNode
@@ -191,6 +193,8 @@ export function ItemBrowser({
   /** Runs the shortcut for `event`. Returns whether it was one. See docs/spec/04-menus-and-shortcuts.md. */
   const handleKey = (event: KeyboardEvent) => {
     const command = event.metaKey || event.ctrlKey
+    // On a Mac, Ctrl+C starts the Create shortcuts (Ctrl+C then F), so copying takes ⌘.
+    const clipboardKey = IS_MAC ? event.metaKey : event.ctrlKey
     const single = selectedItems.length === 1 ? selectedItems[0] : undefined
     const inBin = selectedItems.some((item) => item.binEntry)
     // Reading actions work on any item; changing ones need write access to every selected item.
@@ -236,6 +240,10 @@ export function ItemBrowser({
       setPreviewPath(single.path)
     } else if (command && event.altKey && event.code === 'KeyC' && readable) {
       void actions.copyLink(selectedItems)
+    } else if (clipboardKey && !event.altKey && event.code === 'KeyC' && readable) {
+      actions.copyToClipboard(selectedItems)
+    } else if (clipboardKey && !event.altKey && event.code === 'KeyX' && organisable) {
+      actions.cutToClipboard(selectedItems)
     } else if (event.shiftKey && event.key === 'F10' && selectedItems.length > 0) {
       openMenu({ element: document.activeElement ?? document.body }, selectedItems)
     } else {

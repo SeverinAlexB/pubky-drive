@@ -63,8 +63,17 @@ Creates "Copy of name" in the same folder (with a number if taken). Snackbar:
 
 ## Undo
 
-Undo reverses the last organise operation (rename, copy, move or star) as long
-as its snackbar is visible.
+Every rename, copy, move, star change, area change and move to bin goes into
+the session's undo history (the last 50 actions).
+
+- The snackbar's **Undo** reverses that action, as long as the snackbar is
+  visible.
+- ⌘Z reverses the latest action that isn't undone yet, and ⌘Y or ⇧⌘Z redoes
+  the latest undone one. Snackbar: "Action undone" or "Action redone", as in
+  Drive.
+- A new action clears what could be redone. Creating folders, uploading and
+  deleting forever can't be undone.
+- Undoing a copy deletes it; redoing makes it again.
 
 ## Multi-file progress and failures
 

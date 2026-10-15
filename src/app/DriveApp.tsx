@@ -31,6 +31,7 @@ import { SearchField } from '../features/search/SearchField'
 import { SearchResultsView } from '../features/search/SearchResultsView'
 import { copyText } from '../features/sharing/clipboard'
 import { StarredView } from '../features/starred/StarredView'
+import { ActionHistoryProvider } from '../features/actions/ActionHistoryProvider'
 import { UploadsProvider, useUploads } from '../features/upload/UploadsProvider'
 import { Avatar } from '../ui/Avatar'
 import { Dialog, DialogHostProvider, useDialogHost } from '../ui/Dialog'
@@ -53,13 +54,15 @@ interface DriveAppProps {
 export function DriveApp({ session, onReplaceSession, onSignOut }: DriveAppProps) {
   return (
     <DriveProvider session={session} replaceSession={onReplaceSession}>
-      <ViewPreferencesProvider>
-        <DialogHostProvider>
-          <UploadsProvider>
-            <Shell onSignOut={onSignOut} />
-          </UploadsProvider>
-        </DialogHostProvider>
-      </ViewPreferencesProvider>
+      <ActionHistoryProvider>
+        <ViewPreferencesProvider>
+          <DialogHostProvider>
+            <UploadsProvider>
+              <Shell onSignOut={onSignOut} />
+            </UploadsProvider>
+          </DialogHostProvider>
+        </ViewPreferencesProvider>
+      </ActionHistoryProvider>
     </DriveProvider>
   )
 }
@@ -376,15 +379,18 @@ function useNarrowedAccessNotice() {
 const CHORD_TIMEOUT_MS = 1500
 
 /**
- * Shortcuts that work anywhere: `/` (search), ⌘/ (shortcuts), Ctrl+C then F/U/I (new folder,
- * upload files, upload folder) and ⌥V then L/D (layout, details).
+ * Shortcuts that work anywhere: `/` (search), ⌘/ (shortcuts), ⌘Z and ⌘Y (undo, redo), ⌘V
+ * (paste into the open folder), Ctrl+C then F/U/I (new folder, upload files, upload folder) and
+ * ⌥V then L/D (layout, details).
  */
 function useGlobalShortcuts(route: Route) {
   const actions = useItemActions()
   const uploads = useUploads()
   const { openDialog } = useDialogHost()
   const { layout, setLayout, detailsOpen, setDetailsOpen } = useViewPreferences()
-  const { folder } = useTargetFolder(route)
+  const { folder, caption } = useTargetFolder(route)
+  // Paste only into the open folder, not into the fallback that New uses outside folders.
+  const pasteTarget = route.view === 'folder' && !caption ? folder : undefined
   const chord = useRef<{ prefix: 'create' | 'view'; at: number }>(undefined)
 
   useEffect(() => {
@@ -392,6 +398,7 @@ function useGlobalShortcuts(route: Route) {
       const target = event.target as HTMLElement
       if (target.closest('input, textarea, dialog, [role=menu]')) return
 
+      const command = event.metaKey || event.ctrlKey
       const pending =
         chord.current && Date.now() - chord.current.at < CHORD_TIMEOUT_MS
           ? chord.current.prefix
@@ -407,6 +414,12 @@ function useGlobalShortcuts(route: Route) {
         if (event.code === 'KeyL') setLayout(layout === 'list' ? 'grid' : 'list')
         else if (event.code === 'KeyD') setDetailsOpen(!detailsOpen)
         else return
+      } else if (command && !event.shiftKey && event.code === 'KeyZ') {
+        void actions.undo()
+      } else if (command && (event.code === 'KeyY' || (event.shiftKey && event.code === 'KeyZ'))) {
+        void actions.redo()
+      } else if (command && event.code === 'KeyV' && pasteTarget) {
+        void actions.paste(pasteTarget)
       } else if (event.key === '/' && !event.metaKey && !event.ctrlKey) {
         document.getElementById('search-input')?.focus()
       } else if (event.key === '/' && (event.metaKey || event.ctrlKey)) {
@@ -426,7 +439,17 @@ function useGlobalShortcuts(route: Route) {
 
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [actions, uploads, openDialog, folder, layout, setLayout, detailsOpen, setDetailsOpen])
+  }, [
+    actions,
+    uploads,
+    openDialog,
+    folder,
+    pasteTarget,
+    layout,
+    setLayout,
+    detailsOpen,
+    setDetailsOpen,
+  ])
 }
 
 const SHORTCUT_GROUPS: [string, [string, string][]][] = [
@@ -456,6 +479,11 @@ const SHORTCUT_GROUPS: [string, [string, string][]][] = [
       ['Star or unstar', '⌥⌘S'],
       ['Preview', '⌥⌘P'],
       ['Copy link', '⌥⌘C'],
+      ['Copy', '⌘C'],
+      ['Cut', '⌘X'],
+      ['Paste', '⌘V'],
+      ['Undo', '⌘Z'],
+      ['Redo', '⌘Y'],
       ['More actions', 'Shift + F10'],
     ],
   ],

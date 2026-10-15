@@ -81,8 +81,9 @@ test('binning a public folder with more files than the delete limit allows compl
   await expect(page.getByRole('status')).toContainText('‘Many’ moved to bin', { timeout: 90_000 })
   await expect(row(page, 'Many')).toHaveCount(0)
 
-  // Deletes were paced below the homeserver's limit, so none was refused.
-  expect(requests.tooManyRequests).toEqual([])
+  // Deletes were paced below the homeserver's limit, so none was refused. (The event stream can
+  // still meet the per-IP limit that the earlier tests used up; it retries on its own.)
+  expect(requests.tooManyRequests.filter((url) => !url.includes('/events-stream'))).toEqual([])
 })
 
 test('a folder deleted elsewhere while open says so, instead of looking empty', async ({

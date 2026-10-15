@@ -1,5 +1,6 @@
 // Every command on items, shared by menus, the selection bar, drag and drop and shortcuts.
-// Each command reports its outcome in the snackbar and, where possible, offers Undo.
+// Each command reports its outcome in the snackbar and, where possible, offers Undo, which also
+// goes into the session's undo history (⌘Z, ⌘Y).
 
 import { useMemo } from 'react'
 import { useDrive } from '../../app/DriveContext'
@@ -23,7 +24,14 @@ import {
   renameItem,
   type Progress,
 } from '../../drive/operations'
-import { nameOf, parentOf, type Area, type StoragePath } from '../../drive/paths'
+import {
+  areaOfPath,
+  isWithin,
+  nameOf,
+  parentOf,
+  type Area,
+  type StoragePath,
+} from '../../drive/paths'
 import { useConfirm, useDialogHost } from '../../ui/Dialog'
 import { useNotifier } from '../../ui/Snackbar'
 import * as bin from '../bin/bin'
@@ -34,6 +42,8 @@ import { copyText } from '../sharing/clipboard'
 import { viewerLink } from '../sharing/links'
 import { ShareDialog } from '../sharing/ShareDialog'
 import { followMove, forgetRemoved } from '../starred/starred'
+import { useActionHistory } from './ActionHistoryProvider'
+import type { Undoable } from './history'
 
 export type ItemActions = ReturnType<typeof useItemActions>
 
@@ -43,6 +53,7 @@ export function useItemActions() {
   const { notify, dismiss } = useNotifier()
   const { openDialog } = useDialogHost()
   const confirm = useConfirm()
+  const { history, clipboard } = useActionHistory()
 
   return useMemo(() => {
     /**
@@ -88,6 +99,137 @@ export function useItemActions() {
 
     function plural(items: readonly { name: string }[], noun = 'item') {
       return items.length === 1 ? `‘${items[0].name}’` : `${items.length} ${noun}s`
+    }
+
+    /** Records `action` for ⌘Z and shows `message` with an Undo button for it. */
+    function offerUndo(message: string, action: Undoable) {
+      history.record(action)
+      notify(message, { action: { label: 'Undo', run: () => void actions.undo(action) } })
+    }
+
+    /** Moves each item at `to` back to `from`. Reversing that moves them forward again. */
+    function movesBack(moves: readonly { from: StoragePath; to: StoragePath }[]): Undoable {
+      return {
+        undo: async () => {
+          const reversed = await run('Moving', async (onProgress) => {
+            const done: { from: StoragePath; to: StoragePath }[] = []
+            for (const { from, to } of [...moves].reverse()) {
+              const back = await moveItem(
+                drive,
+                itemFromPath(to),
+                parentOf(from),
+                nameOf(from),
+                'number',
+                onProgress,
+              )
+              await updateStarred((current) => followMove(current, to, back)).catch(() => {})
+              done.push({ from: to, to: back })
+            }
+            return done
+          })
+          return movesBack(reversed)
+        },
+      }
+    }
+
+    /** Deletes copies. Reversing that copies their sources again. */
+    function copiesRemoval(
+      copies: readonly { source: StoragePath; copy: StoragePath }[],
+    ): Undoable {
+      return {
+        undo: async () => {
+          await run('Deleting', async (onProgress) => {
+            for (const { copy } of copies) await deleteItem(drive, itemFromPath(copy), onProgress)
+          })
+          return {
+            undo: async () =>
+              copiesRemoval(
+                await run('Copying', (onProgress) =>
+                  copyEach(
+                    copies.map(({ source, copy }) => ({
+                      item: itemFromPath(source),
+                      target: parentOf(copy),
+                      name: nameOf(copy),
+                    })),
+                    onProgress,
+                  ),
+                ),
+              ),
+          }
+        },
+      }
+    }
+
+    /** Restores binned items. Reversing that moves them to the bin again. */
+    function binRestore(entries: readonly bin.BinEntry[]): Undoable {
+      return {
+        undo: async () => {
+          const restored = await run('Restoring', async (onProgress) => {
+            const paths: StoragePath[] = []
+            for (const entry of entries)
+              paths.push(await bin.restoreFromBin(drive, entry, roots, onProgress))
+            return paths
+          })
+          return {
+            undo: async () =>
+              binRestore(
+                await run('Moving to bin', (onProgress) =>
+                  binEach(
+                    restored.map((path) => itemFromPath(path)),
+                    onProgress,
+                  ),
+                ),
+              ),
+          }
+        },
+      }
+    }
+
+    /** Sets the starred items back to `before`. Reversing that sets them to `after`. */
+    function starsBack(
+      before: ReadonlySet<StoragePath>,
+      after: ReadonlySet<StoragePath>,
+    ): Undoable {
+      return {
+        undo: async () => {
+          await updateStarred(() => new Set(before))
+          return starsBack(after, before)
+        },
+      }
+    }
+
+    async function copyEach(
+      copies: readonly { item: DriveItem; target: StoragePath; name: string }[],
+      onProgress: Progress,
+    ) {
+      const made: { source: StoragePath; copy: StoragePath }[] = []
+      for (const { item, target, name } of copies) {
+        made.push({
+          source: item.path,
+          copy: await copyItem(drive, item, target, name, onProgress),
+        })
+      }
+      return made
+    }
+
+    async function binEach(items: readonly DriveItem[], onProgress: Progress) {
+      const binned: bin.BinEntry[] = []
+      for (const item of items) {
+        binned.push(await bin.moveToBin(drive, item, onProgress))
+        await updateStarred((current) => forgetRemoved(current, item.path)).catch(() => {})
+      }
+      return binned
+    }
+
+    /** Asks before private items are pasted into a public folder. */
+    async function confirmBecomingPublic(items: readonly DriveItem[], target: StoragePath) {
+      if (areaOfPath(target) !== 'public' || items.every((item) => item.area === 'public'))
+        return true
+      return confirm({
+        title: 'Paste into a public folder?',
+        message: `${plural(items)} will become public. Anyone with the link can open ${items.length === 1 ? 'it' : 'them'}.`,
+        confirmLabel: 'Paste',
+      })
     }
 
     /**
@@ -159,19 +301,10 @@ export function useItemActions() {
               await updateStarred((current) => followMove(current, item.path, renamed)).catch(
                 () => {},
               )
-              notify(`‘${item.name}’ renamed to ‘${newName}’`, {
-                action: {
-                  label: 'Undo',
-                  run: () =>
-                    void attempt(async () => {
-                      await run('Undoing', (onProgress) =>
-                        renameItem(drive, itemFromPath(renamed), item.name, onProgress),
-                      )
-                      await updateStarred((current) => followMove(current, renamed, item.path))
-                      notify('Rename undone')
-                    }),
-                },
-              })
+              offerUndo(
+                `‘${item.name}’ renamed to ‘${newName}’`,
+                movesBack([{ from: item.path, to: renamed }]),
+              )
             }}
           />
         ))
@@ -179,21 +312,13 @@ export function useItemActions() {
 
       makeCopy(item: DriveItem) {
         return attempt(async () => {
-          const copy = await run('Copying', (onProgress) =>
-            copyItem(drive, item, parentOf(item.path), copyName(item.name), onProgress),
+          const copies = await run('Copying', (onProgress) =>
+            copyEach(
+              [{ item, target: parentOf(item.path), name: copyName(item.name) }],
+              onProgress,
+            ),
           )
-          notify(`Created ‘${nameOf(copy)}’`, {
-            action: {
-              label: 'Undo',
-              run: () =>
-                void attempt(async () => {
-                  await run('Undoing', (onProgress) =>
-                    deleteItem(drive, itemFromPath(copy), onProgress),
-                  )
-                  notify('Copy removed')
-                }),
-            },
-          })
+          offerUndo(`Created ‘${nameOf(copies[0].copy)}’`, copiesRemoval(copies))
         })
       },
 
@@ -218,30 +343,10 @@ export function useItemActions() {
         if (!(await confirmSectionChange(movable, target))) return
         try {
           const moved = await run('Moving', (onProgress) => moveEach(movable, target, onProgress))
-          notify(`${plural(movable)} moved to ‘${folderLabel(target)}’`, {
-            action: {
-              label: 'Undo',
-              run: () =>
-                void attempt(async () => {
-                  await run('Undoing', async (onProgress) => {
-                    for (const { from, to } of moved) {
-                      const back = await moveItem(
-                        drive,
-                        itemFromPath(to),
-                        parentOf(from.path),
-                        from.name,
-                        'number',
-                        onProgress,
-                      )
-                      await updateStarred((current) => followMove(current, to, back)).catch(
-                        () => {},
-                      )
-                    }
-                  })
-                  notify('Move undone')
-                }),
-            },
-          })
+          offerUndo(
+            `${plural(movable)} moved to ‘${folderLabel(target)}’`,
+            movesBack(moved.map(({ from, to }) => ({ from: from.path, to }))),
+          )
         } catch (error) {
           if (options.throwErrors) throw error
           notify(describeError(error))
@@ -252,6 +357,7 @@ export function useItemActions() {
         if (!access.appData) return
         const allStarred = items.every((item) => starred.has(item.path))
         const before = new Set(starred)
+        let after: ReadonlySet<StoragePath> = before
         await attempt(async () => {
           await updateStarred((current) => {
             const next = new Set(current)
@@ -259,12 +365,14 @@ export function useItemActions() {
               if (allStarred) next.delete(item.path)
               else next.add(item.path)
             }
+            after = next
             return next
           })
           const count = items.length === 1 ? '1 item' : `${items.length} items`
-          notify(allStarred ? `${count} removed from starred` : `${count} added to starred`, {
-            action: { label: 'Undo', run: () => void attempt(() => updateStarred(() => before)) },
-          })
+          offerUndo(
+            allStarred ? `${count} removed from starred` : `${count} added to starred`,
+            starsBack(before, after),
+          )
         })
       },
 
@@ -274,27 +382,8 @@ export function useItemActions() {
           return
         }
         await attempt(async () => {
-          const entries = await run('Moving to bin', async (onProgress) => {
-            const binned: bin.BinEntry[] = []
-            for (const item of items) {
-              binned.push(await bin.moveToBin(drive, item, onProgress))
-              await updateStarred((current) => forgetRemoved(current, item.path)).catch(() => {})
-            }
-            return binned
-          })
-          notify(`${plural(items)} moved to bin`, {
-            action: {
-              label: 'Undo',
-              run: () =>
-                void attempt(async () => {
-                  await run('Restoring', async (onProgress) => {
-                    for (const entry of entries)
-                      await bin.restoreFromBin(drive, entry, roots, onProgress)
-                  })
-                  notify('Restored')
-                }),
-            },
-          })
+          const entries = await run('Moving to bin', (onProgress) => binEach(items, onProgress))
+          offerUndo(`${plural(items)} moved to bin`, binRestore(entries))
         })
       },
 
@@ -360,6 +449,7 @@ export function useItemActions() {
           moveItem(drive, item, target, item.name, 'number', onProgress),
         )
         await updateStarred((current) => followMove(current, item.path, moved)).catch(() => {})
+        history.record(movesBack([{ from: item.path, to: moved }]))
         notify(`‘${item.name}’ is now ${AREA_LABELS[area].toLowerCase()}`, {
           action: { label: 'Show', run: () => navigate(folderRoute(parentOf(moved))) },
         })
@@ -375,6 +465,73 @@ export function useItemActions() {
           }
           await copyText(publicItems.map((item) => viewerLink(ownerZ32, item.path)).join('\n'))
           notify(publicItems.length === 1 ? 'Link copied' : `${publicItems.length} links copied`)
+        })
+      },
+
+      /** Undoes `action`, or else the latest action (⌘Z). */
+      undo(action?: Undoable) {
+        return attempt(async () => {
+          if (await history.undo(action)) notify('Action undone')
+        })
+      },
+
+      /** Redoes the latest undone action (⌘Y, ⇧⌘Z). */
+      redo() {
+        return attempt(async () => {
+          if (await history.redo()) notify('Action redone')
+        })
+      },
+
+      /** ⌘C: remembers the items for pasting, and puts links to public ones on the clipboard. */
+      copyToClipboard(items: DriveItem[]) {
+        clipboard.current = { mode: 'copy', items }
+        notify(
+          items.length === 1
+            ? 'Item copied to clipboard'
+            : `${items.length} items copied to clipboard`,
+        )
+        const links = items
+          .filter((item) => item.area === 'public')
+          .map((item) => viewerLink(ownerZ32, item.path))
+        if (links.length > 0) void copyText(links.join('\n')).catch(() => {})
+      },
+
+      /** ⌘X: remembers the items for moving them with the next paste. */
+      cutToClipboard(items: DriveItem[]) {
+        clipboard.current = { mode: 'cut', items }
+        notify(
+          items.length === 1 ? 'Item cut to clipboard' : `${items.length} items cut to clipboard`,
+        )
+      },
+
+      /** ⌘V: copies or moves the items on the clipboard into `target`. */
+      async paste(target: StoragePath) {
+        const pending = clipboard.current
+        if (!pending || !canWrite(access, target)) return
+        if (!(await confirmBecomingPublic(pending.items, target))) return
+        if (pending.mode === 'cut') {
+          // Cut items move once; pasting again does nothing, as in Drive.
+          clipboard.current = undefined
+          await actions.moveTo(pending.items, target)
+          return
+        }
+        if (pending.items.some((item) => item.kind === 'folder' && isWithin(target, item.path))) {
+          notify('A folder can’t be copied into itself.')
+          return
+        }
+        await attempt(async () => {
+          const copies = await run('Copying', (onProgress) =>
+            copyEach(
+              pending.items.map((item) => ({ item, target, name: copyName(item.name) })),
+              onProgress,
+            ),
+          )
+          offerUndo(
+            copies.length === 1
+              ? `Created ‘${nameOf(copies[0].copy)}’`
+              : `Created ${copies.length} copies`,
+            copiesRemoval(copies),
+          )
         })
       },
 
@@ -447,5 +604,7 @@ export function useItemActions() {
     dismiss,
     openDialog,
     confirm,
+    history,
+    clipboard,
   ])
 }

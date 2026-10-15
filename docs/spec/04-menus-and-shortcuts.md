@@ -87,6 +87,11 @@ selection).
 | Star or unstar          | ⌥⌘S                 |
 | Preview                 | ⌥⌘P                 |
 | Copy link               | ⌥⌘C                 |
+| Copy                    | ⌘C                  |
+| Cut                     | ⌘X                  |
+| Paste                   | ⌘V                  |
+| Undo                    | ⌘Z                  |
+| Redo                    | ⌘Y or ⇧⌘Z           |
 | Go up one folder        | ⌥↑                  |
 | Search                  | `/`                 |
 | New folder              | Ctrl+C then F       |
@@ -98,7 +103,22 @@ selection).
 ⌘ is Ctrl on Windows and Linux. Shortcuts don't fire while a text field has
 focus, except Esc.
 
-**P2:** copy, cut and paste items (⌘C, ⌘X, ⌘V), and undo and redo (⌘Z, ⌘Y).
+## Copy, cut and paste
+
+- ⌘C on selected items: snackbar "Item copied to clipboard" or "N items
+  copied to clipboard". Like Drive, which puts the items' links on the system
+  clipboard, the app copies the viewer links of public items; private items
+  have no link.
+- ⌘X: "Item cut to clipboard" or "N items cut to clipboard". Needs write
+  access.
+- ⌘V in an open folder with write access:
+  - after a copy, creates "Copy of name" for each item. Snackbar: "Created
+    ‘Copy of name’" or "Created N copies", with **Undo**. Pasting again makes
+    more copies.
+  - after a cut, moves the items there, with the usual move snackbar. The
+    clipboard is then empty, so pasting again does nothing.
+  - Pasting private items into a public folder asks first: "Paste into a
+    public folder?".
 
 ## Keyboard shortcuts dialog
 
