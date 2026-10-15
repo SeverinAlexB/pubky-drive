@@ -1,7 +1,7 @@
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { useDrive } from '../../app/DriveContext'
-import { areaLabel, folderRoute } from '../../app/locations'
+import { areaLabel, folderLabel, folderRoute } from '../../app/locations'
 import { navigate, type Route, type Scope } from '../../app/routes'
 import { useLiveChanges } from '../../app/useLiveChanges'
 import { useLoad } from '../../app/useLoad'
@@ -36,14 +36,17 @@ export function FolderView({ scope, area, folder }: FolderViewProps) {
     scope === 'drive' ? access.roots[area] : access.homeserver[area] && HOMESERVER_ROOTS[area]
   const path = root && ((folder ? `${root}${folder}/` : root) as StoragePath)
 
-  const load = useCallback(async (): Promise<ListItem[]> => {
+  const load = useCallback(async (): Promise<ListItem[] | 'missing'> => {
     if (!path) return []
-    const items = await drive.listFolder(path)
+    // An area root is simply empty until it has files; any other folder can disappear.
+    const items =
+      path === root ? await drive.listFolder(path) : await drive.listFolderIfExists(path)
+    if (!items) return 'missing'
     return scope === 'homeserver' ? items.map(withHomeserverBadge) : items
-  }, [drive, path, scope])
+  }, [drive, path, root, scope])
   // Reload after changes made here (`version`) and elsewhere (`liveChanges`).
   const liveChanges = useLiveChanges(path ? [path] : [])
-  const { data: items, error, retry } = useLoad(load, `${version}:${liveChanges}`)
+  const { data, error, retry } = useLoad(load, `${version}:${liveChanges}`)
 
   if (!root || !path) {
     if (scope === 'homeserver') return <HomeserverLocked />
@@ -61,11 +64,23 @@ export function FolderView({ scope, area, folder }: FolderViewProps) {
   const goUp = () => navigate(path === root ? sectionRoute : folderRoute(parentOf(path)))
   const writable = canWrite(access, path)
 
+  if (data === 'missing') {
+    return (
+      <div className="browser-state">
+        <h2>This folder no longer exists</h2>
+        <p>It may have been moved, renamed or deleted, here or in another app.</p>
+        <button type="button" className="button button-outlined" onClick={goUp}>
+          Open {folderLabel(parentOf(path))}
+        </button>
+      </div>
+    )
+  }
+
   return (
     <ItemBrowser
       key={path}
       title={<Breadcrumbs scope={scope} area={area} root={root} path={path} writable={writable} />}
-      items={items}
+      items={data}
       error={error}
       onRetry={retry}
       columns="owner"

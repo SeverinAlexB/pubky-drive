@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
-import { createFolder, openArea, row, signUp, uploadFiles } from './helpers'
+import { contextMenu, createFolder, openArea, row, signUp, uploadFiles } from './helpers'
 
 // The production homeserver allows 1 event-stream request per second per IP (burst 5). Run the
 // testnet with e2e/homeserver-rate-limited.toml for these tests to be meaningful. Tests that share
@@ -83,4 +83,21 @@ test('binning a public folder with more files than the delete limit allows compl
 
   // Deletes were paced below the homeserver's limit, so none was refused.
   expect(requests.tooManyRequests).toEqual([])
+})
+
+test('a folder deleted elsewhere while open says so, instead of looking empty', async ({
+  page,
+  context,
+}) => {
+  await signUp(page)
+  await openArea(page, 'Private')
+  await createFolder(page, 'Temporary')
+  const other = await context.newPage()
+  await other.goto(page.url())
+  await row(other, 'Temporary').dblclick()
+  await expect(other.getByRole('navigation', { name: 'Folder path' })).toContainText('Temporary')
+
+  await contextMenu(page, 'Temporary', 'Move to bin')
+  await expect(other.getByText('This folder no longer exists')).toBeVisible({ timeout: 15_000 })
+  await other.close()
 })

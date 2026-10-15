@@ -30,8 +30,11 @@ describe('listFolder', () => {
     ])
   })
 
-  test('treats a missing folder as empty', async () => {
+  test('treats a missing folder as empty, but can tell it apart', async () => {
+    files.seed(`${ROOT}empty/.keep`)
     expect(await drive.listFolder(`${ROOT}missing/`)).toEqual([])
+    expect(await drive.listFolderIfExists(`${ROOT}missing/`)).toBeUndefined()
+    expect(await drive.listFolderIfExists(`${ROOT}empty/`)).toEqual([])
   })
 
   test('hides the app data folders', async () => {

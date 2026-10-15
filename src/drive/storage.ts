@@ -42,21 +42,29 @@ export class DriveStorage {
 
   /** The folders and files directly inside `folder`, with file metadata. Missing folders are empty. */
   async listFolder(folder: StoragePath): Promise<DriveItem[]> {
-    const paths = (await this.listPaths(folder, { shallow: true })).filter((path) =>
-      this.isVisible(path),
-    )
+    return (await this.listFolderIfExists(folder)) ?? []
+  }
+
+  /**
+   * Like `listFolder`, but `undefined` when the folder doesn't exist on the homeserver, such as
+   * after it was moved or deleted elsewhere. Folders exist only while they contain a file.
+   */
+  async listFolderIfExists(folder: StoragePath): Promise<DriveItem[] | undefined> {
+    const listed = await this.listPaths(folder, { shallow: true })
+    if (!listed) return undefined
+    const paths = listed.filter((path) => this.isVisible(path))
     return mapWithConcurrency(paths, STATS_CONCURRENCY, (path) => this.describe(path))
   }
 
   /** The names directly inside `folder`, including hidden ones, for conflict checks. */
   async childNames(folder: StoragePath): Promise<Set<string>> {
-    const paths = await this.listPaths(folder, { shallow: true })
+    const paths = (await this.listPaths(folder, { shallow: true })) ?? []
     return new Set(paths.map(nameOf))
   }
 
   /** Every file below `folder` at any depth, including folder markers. */
-  listFilesBelow(folder: StoragePath): Promise<StoragePath[]> {
-    return this.listPaths(folder, { shallow: false })
+  async listFilesBelow(folder: StoragePath): Promise<StoragePath[]> {
+    return (await this.listPaths(folder, { shallow: false })) ?? []
   }
 
   /** An item with its current metadata, or `undefined` when the file doesn't exist. */
@@ -79,6 +87,7 @@ export class DriveStorage {
     return stats ? withStats(item, stats) : item
   }
 
+  /** Every path in `folder`, page by page; `undefined` when the folder doesn't exist. */
   private async listPaths(folder: StoragePath, options: { shallow: boolean }) {
     const paths: StoragePath[] = []
     let cursor: string | null = null
@@ -98,7 +107,7 @@ export class DriveStorage {
         cursor = page[page.length - 1]
       }
     } catch (error) {
-      if (isNotFound(error)) return []
+      if (isNotFound(error)) return undefined
       throw error
     }
 

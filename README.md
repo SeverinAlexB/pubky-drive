@@ -100,6 +100,18 @@ static host works without rewrite rules. Production builds only offer Pubky Ring
 | `npm run check` | Checks formatting (Prettier) and lints the code and workflows.                                                                 |
 | `npm run build` | Type-checks and builds the app.                                                                                                |
 
+To test against the production homeserver's rate limits, start the testnet with the same limits:
+
+```bash
+pubky-testnet --homeserver-config e2e/homeserver-rate-limited.toml
+```
+
+The browser tests in `e2e/rate-limits.spec.ts` check that the app stays within them; they run
+after the other tests, because all browsers share one IP.
+
+In development, a request counter at the bottom of the window shows the app's homeserver requests
+by kind and any `429 Too Many Requests` responses. Set `VITE_SHOW_REQUEST_MONITOR=false` to hide it.
+
 The code is organised by feature:
 
 - `src/drive/`: paths, names, listings and operations on the Homeserver.

@@ -157,10 +157,9 @@ streaming upload. The app warns before uploading or copying files over 100 MB.
 
 - **Starred** reads `starred.json`. Moving or renaming a starred item updates
   its stored path; deleting it removes the entry.
-- **Recent** reads the newest events for the area roots
-  (`eventStreamForUser(...).path(root).reverse().limit(200)`), keeps the latest
-  write per path, skips deleted paths and hidden files, and groups the result
-  by day.
+- **Recent** reads the session's event history (see "Live updates and rate
+  limits"), keeps the latest write per path, skips deleted paths and hidden
+  files, and groups the result by day.
 - **Search** lists both areas recursively and matches names that contain the
   query (case-insensitive). Results show their folder in a Location column.
 
@@ -189,10 +188,38 @@ dialog explains how to make a file public instead. Sharing with specific
 people isn't possible, because Homeservers don't grant access to other
 identities.
 
-## Live updates
+## Live updates and rate limits
 
-While a folder is open, the app follows the live event stream for that folder
-and reloads the listing when another device or app changes it.
+The production homeserver (`homeserver.pubky.app`) limits requests per IP or
+user. The limits that matter here:
+
+| Request              | Limit                           |
+| -------------------- | ------------------------------- |
+| `GET /events-stream` | 1 per second per IP, burst 5    |
+| `DELETE /pub/**`     | 5 per second per user, burst 50 |
+| Writes               | 1 MB/s per user by default      |
+
+`e2e/homeserver-rate-limited.toml` runs the local testnet with the same limits.
+
+**One event stream per session.** An `EventHub` (`src/pubky/eventHub.ts`)
+loads the newest 300 events of all watched folders in one request, then follows
+one live stream from the newest event. It watches the Drive folders, or the
+storage roots of areas with homeserver access. When the stream drops or is
+rate-limited, it reconnects with exponential backoff and jitter, resuming from
+the last event it saw, so nothing is missed. Open folders reload when an event
+arrives below them; Recent reads the hub's history and makes no event requests
+of its own. Signing in and browsing costs two event-stream requests per session.
+
+**Retrying.** Storage requests that get `429` or `503` wait and retry with
+backoff, up to eight attempts (`src/drive/retryingFileStore.ts`). The SDK
+doesn't expose the `Retry-After` header, so the app picks its own delays.
+Deletes under `/pub/` are paced at 4 per second after a burst of 40, below the
+homeserver's limit, so long operations rarely get refused. While an operation
+waits, its progress message says that the homeserver is busy.
+
+**Other tabs.** A tab that signs in, changes access or signs out saves or
+forgets the session in local storage; other tabs follow that change instead of
+using a session that may have been revoked.
 
 ## Not included
 
