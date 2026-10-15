@@ -1,7 +1,7 @@
 import { expect, test } from 'vitest'
 import { folderLabel, folderRoute, isAreaRoot, locate } from './locations'
 
-test('paths inside the Drive folders belong to My Drive', () => {
+test('paths inside the Drive folders belong to Pubky Drive', () => {
   expect(locate('/priv/pubky-drive/files/Notes/')).toEqual({
     scope: 'drive',
     area: 'private',

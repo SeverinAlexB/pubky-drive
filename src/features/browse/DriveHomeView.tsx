@@ -4,8 +4,8 @@ import { AREA_LABELS } from '../../app/locations'
 import { ItemBrowser } from './ItemBrowser'
 import type { ListItem } from './listItem'
 
-/** My Drive: the Public and Private areas as two folders. See docs/spec/02-navigation.md. */
-export function MyDriveView() {
+/** Pubky Drive: the Public and Private areas as two folders. See docs/spec/02-navigation.md. */
+export function DriveHomeView() {
   const { access } = useDrive()
 
   const items = useMemo<ListItem[]>(
@@ -23,7 +23,7 @@ export function MyDriveView() {
 
   return (
     <ItemBrowser
-      title={<h1>My Drive</h1>}
+      title={<h1>Pubky Drive</h1>}
       items={items}
       columns="owner"
       banner={

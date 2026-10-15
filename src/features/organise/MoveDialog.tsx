@@ -11,7 +11,7 @@ import { Dialog } from '../../ui/Dialog'
 import { sleep } from '../../pubky/backoff'
 import { FileIcon } from '../../ui/FileIcon'
 import { matchByName } from '../search/search'
-import { starredFolders, suggestedFolders } from './moveTargets'
+import { starredFolders, recentFolders } from './moveTargets'
 import './MoveDialog.css'
 
 interface MoveDialogProps {
@@ -23,20 +23,20 @@ interface MoveDialogProps {
 /** `undefined` browses the top level, where the two areas are listed. */
 type Browsed = StoragePath | undefined
 
-type Tab = 'suggested' | 'starred' | 'all'
+type Tab = 'recent' | 'starred' | 'browse'
 
 const HISTORY_WAIT_MS = 2000
 
 const TABS: { tab: Tab; label: string }[] = [
-  { tab: 'suggested', label: 'Suggested' },
+  { tab: 'recent', label: 'Recent' },
   { tab: 'starred', label: 'Starred' },
-  { tab: 'all', label: 'All locations' },
+  { tab: 'browse', label: 'Browse' },
 ]
 
 /** Chooses a destination folder. See docs/spec/06-organise.md, "Move". */
 export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
   const { drive, access, events, starred, loadSearchIndex } = useDrive()
-  const [tab, setTab] = useState<Tab>('suggested')
+  const [tab, setTab] = useState<Tab>('recent')
   /** The search field's text; `undefined` while the field is closed. */
   const [query, setQuery] = useState<string>()
   const currentFolder = parentOf(items[0].path)
@@ -49,7 +49,7 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
 
   const searching = query !== undefined && query.trim() !== ''
   const loadFolders = useCallback(async (): Promise<FolderOption[]> => {
-    if (tab === 'all' && !searching) {
+    if (tab === 'browse' && !searching) {
       if (browsed === undefined) return topLevelFolders(access)
       return (await drive.listFolder(browsed)).filter((item) => item.kind === 'folder')
     }
@@ -57,10 +57,10 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
     const everyFolder = (await loadSearchIndex()).filter((item) => item.kind === 'folder')
     let folders = matchByName(everyFolder, query ?? '')
     if (!searching && tab === 'starred') folders = starredFolders(starred, everyFolder)
-    if (!searching && tab === 'suggested') {
-      // The history may still wait for the homeserver's rate limit; suggest from what's known.
+    if (!searching && tab === 'recent') {
+      // The history may still wait for the homeserver's rate limit; use what's known.
       await Promise.race([events.ready, sleep(HISTORY_WAIT_MS)])
-      folders = suggestedFolders(events.history(), everyFolder, currentFolder)
+      folders = recentFolders(events.history(), everyFolder, currentFolder)
     }
     return folders.map((folder) => ({ ...folder, location: folderLabel(parentOf(folder.path)) }))
   }, [
@@ -77,10 +77,10 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
   ])
   const { data: folders, error: listError } = useLoad(loadFolders)
   const error = moveError ?? listError
-  const browsing = tab === 'all' && !searching
+  const browsing = tab === 'browse' && !searching
 
   const browse = (folder: Browsed) => {
-    setTab('all')
+    setTab('browse')
     setQuery(undefined)
     setBrowsed(folder)
     setSelected(undefined)
@@ -210,7 +210,7 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
             </button>
             <strong>
               {browsed === undefined
-                ? 'My Drive'
+                ? 'Pubky Drive'
                 : isAreaRoot(browsed)
                   ? folderLabel(browsed)
                   : nameOf(browsed)}
@@ -227,8 +227,8 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
             <li className="move-placeholder">
               {searching
                 ? 'No folders match your search'
-                : tab === 'suggested'
-                  ? 'No suggestions yet'
+                : tab === 'recent'
+                  ? 'No recent folders'
                   : tab === 'starred'
                     ? 'No starred folders'
                     : 'No folders'}
@@ -278,7 +278,7 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
         </ul>
       </div>
       <p className="move-target">
-        {target ? <>Move to: {folderLabel(target)}</> : 'Select a location to show the folder path'}
+        {target ? <>Move to: {folderLabel(target)}</> : 'Choose a folder'}
       </p>
       {problem && <p className="field-error">{problem}</p>}
       {!problem && crossesAreas && (

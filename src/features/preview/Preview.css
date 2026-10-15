@@ -90,7 +90,7 @@
   min-height: calc(100vh - 100px);
   padding: 24px;
   background: #fff;
-  color: #1f1f1f;
+  color: var(--text);
 }
 
 .preview-page pre {
@@ -134,7 +134,7 @@
   gap: 4px;
   padding: 4px 8px;
   border-radius: 24px;
-  background: rgb(32 33 36 / 90%);
+  background: rgb(27 29 33 / 90%);
   transform: translateX(-50%);
 }
 
@@ -147,13 +147,13 @@
   height: 48px;
   border: 0;
   border-radius: 50%;
-  background: rgb(32 33 36 / 80%);
+  background: rgb(27 29 33 / 80%);
   color: #fff;
   transform: translateY(-50%);
 }
 
 .preview-nav:hover {
-  background: rgb(60 64 67 / 90%);
+  background: rgb(58 62 70 / 90%);
 }
 
 .preview-nav.previous {

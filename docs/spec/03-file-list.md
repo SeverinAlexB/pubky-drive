@@ -14,8 +14,9 @@ The list is a grid with these columns:
 
 - The header row is 48px high with a bottom divider. Rows are 48px high with a
   divider between them.
-- Hovering a row shows a light grey background. A selected row has a light blue
-  background.
+- Hovering a row shows a light grey background. A selected row has a pale teal
+  background and a 3px accent bar on its left edge; a selected grid tile has a
+  2px accent outline.
 - Recent and search results replace Owner with **Location** (the folder,
   as a link). The bin replaces Date modified with **Date binned**.
 
@@ -39,7 +40,7 @@ Values under 10 of a unit have one decimal place.
 - Files appear below as cards of at least 200px wide and 240px high: a header
   with the icon, name and ⋮, and a preview area. Images show a thumbnail; other
   files show a large type icon.
-- The toggle (⌥V then L) switches between list and grid. The choice is saved
+- The toggle (⇧L) switches between list and grid. The choice is saved
   in the browser.
 
 ## Sorting

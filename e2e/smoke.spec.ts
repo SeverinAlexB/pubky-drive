@@ -1,12 +1,12 @@
 import { expect, test } from '@playwright/test'
 import { createFolder, openArea, row, signUp, uploadFiles } from './helpers'
 
-test('signing up shows My Drive with both areas', async ({ page }) => {
+test('signing up shows Pubky Drive with both areas', async ({ page }) => {
   await signUp(page)
-  await expect(page.getByRole('heading', { name: 'My Drive' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Pubky Drive' })).toBeVisible()
   await expect(row(page, 'Public')).toBeVisible()
   await expect(row(page, 'Private')).toBeVisible()
-  await page.screenshot({ path: 'test-results/screens/my-drive.png' })
+  await page.screenshot({ path: 'test-results/screens/drive.png' })
 })
 
 test('files uploaded into a new folder are listed with their sizes', async ({ page }) => {

@@ -139,7 +139,7 @@ export function itemMenuEntries(items: ListItem[], context: ItemMenuContext): Me
           type: 'item',
           label: 'Details',
           icon: Info,
-          shortcut: '⌥V D',
+          shortcut: '⇧D',
           onSelect: context.showDetails,
         },
       ],
@@ -189,7 +189,7 @@ export interface NewMenuContext {
   folder: StoragePath
   pickFiles: (folder: StoragePath) => void
   pickFolder: (folder: StoragePath) => void
-  /** Shown above the entries, such as "Adds to Private" in My Drive. */
+  /** Shown above the entries, such as "Adds to Private" in Pubky Drive. */
   caption?: string
 }
 
@@ -206,7 +206,7 @@ export function newMenuEntries({
       type: 'item',
       label: 'New folder',
       icon: FolderPlus,
-      shortcut: '⌃C F',
+      shortcut: '⇧N',
       onSelect: () => actions.newFolder(folder),
     },
     separator,
@@ -214,14 +214,14 @@ export function newMenuEntries({
       type: 'item',
       label: 'File upload',
       icon: Upload,
-      shortcut: '⌃C U',
+      shortcut: '⇧U',
       onSelect: () => pickFiles(folder),
     },
     {
       type: 'item',
       label: 'Folder upload',
       icon: FolderUp,
-      shortcut: '⌃C I',
+      shortcut: '⇧I',
       onSelect: () => pickFolder(folder),
     },
   ]

@@ -12,7 +12,7 @@ export function SignInPage({ onSignedIn }: { onSignedIn: (session: Session) => P
   return (
     <main className="signin">
       <header className="signin-header">
-        <HardDrive size={40} color="#0b57d0" aria-hidden />
+        <HardDrive size={40} color="var(--accent)" aria-hidden />
         <h1>Pubky Drive</h1>
         <p>Your files, on your homeserver.</p>
       </header>

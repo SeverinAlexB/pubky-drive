@@ -1,9 +1,9 @@
-# Design: Drive on a Pubky Homeserver
+# Design: a file explorer on a Pubky Homeserver
 
 Pubky Drive is a browser file explorer for the files on your own Pubky
-Homeserver. It follows how Google Drive works ([research notes](research.md))
-where the Homeserver allows it, and departs from it where the storage model is
-different. This document explains those mappings. The numbered documents in
+Homeserver. It offers the usual file-manager features (folders, upload, move,
+star, bin, search, sharing) and builds each of them on what the Homeserver
+provides. This document explains those mappings. The numbered documents in
 [`spec/`](spec/README.md) describe the user interface.
 
 It targets `@synonymdev/pubky` 0.16.1 and Homeservers of the same release.
@@ -62,16 +62,16 @@ Every file lives in one of two **areas**:
 Private means access-controlled, not encrypted: the Homeserver operator can
 read private files. The app says this wherever it asks you to choose an area.
 
-"My Drive" shows the two areas as top-level folders. Changing a file's general
+"Pubky Drive" shows the two areas as top-level folders. Changing a file's general
 access in the share dialog moves the file to the same relative path in the
 other area of the same section.
 
-## Two sections: My Drive and Homeserver
+## Two sections: Pubky Drive and Homeserver
 
-**My Drive** holds the files Pubky Drive manages. Its Public and Private areas
+**Pubky Drive** holds the files Pubky Drive manages. Its Public and Private areas
 are always the Drive folders, `/pub/pubky-drive/files/` and
 `/priv/pubky-drive/files/`, whatever else the session may access. New folders,
-uploads, Recent and search work in My Drive.
+uploads, Recent and search work in Pubky Drive.
 
 The **Homeserver** section shows the raw storage, `/pub/` and `/priv/`,
 including other apps' data. It uses raw names in its breadcrumbs
@@ -87,7 +87,7 @@ session after Pubky Ring approves it:
 
 | Level            | Requested capabilities                       | What it allows                                |
 | ---------------- | -------------------------------------------- | --------------------------------------------- |
-| Drive folder     | `/pub/pubky-drive/:rw,/priv/pubky-drive/:rw` | My Drive, Starred and Bin                     |
+| Drive folder     | `/pub/pubky-drive/:rw,/priv/pubky-drive/:rw` | Pubky Drive, Starred and Bin                  |
 | View all files   | The Drive folder, plus `/pub/:r,/priv/:r`    | Also browse, preview and download any file    |
 | Manage all files | `/pub/:rw,/priv/:rw`                         | Also create, rename, move and delete any file |
 
@@ -102,7 +102,7 @@ read-only.
 The new session must belong to the identity that is signed in; a different
 identity is refused. After saving the new session, the app ends the old one.
 
-Moving items between My Drive and the rest of the homeserver asks for
+Moving items between Pubky Drive and the rest of the homeserver asks for
 confirmation, because apps that read the old location won't find them.
 
 ## App data
@@ -116,7 +116,7 @@ folder, `/priv/pubky-drive/`:
 | `/priv/pubky-drive/bin/<entry-id>/entry.json` | A binned item's original path, kind and binning time |
 | `/priv/pubky-drive/bin/<entry-id>/content/…`  | The binned item's files                              |
 
-My Drive never lists `app/` or `bin/`, because they're outside the Drive
+Pubky Drive never lists `app/` or `bin/`, because they're outside the Drive
 folders. The Homeserver section lists them like any other folder, with "App
 data" and "Bin" badges and a second banner inside `/pub/pubky-drive/` and
 `/priv/pubky-drive/`: changing them by hand can break the bin and starred
@@ -127,13 +127,13 @@ the areas the session can access.
 ## Folders
 
 Directories exist only while they contain a file. To keep an empty folder,
-the app writes a zero-byte marker file named `.keep` into it. My Drive, Recent
+the app writes a zero-byte marker file named `.keep` into it. Pubky Drive, Recent
 and search hide `.keep` files; the Homeserver section shows them with a "Folder
 marker" badge, because it shows exactly what is stored. When a folder gets its first real file, the marker stays; it is
 removed together with the folder.
 
 A folder's modified time is not available from the Homeserver, so folder rows
-show "—" for date and size, like Google Drive's size column.
+show "—" for date and size.
 
 ## Operations without server support
 

@@ -80,8 +80,8 @@ export function SearchField({ initialQuery = '' }: { initialQuery?: string }) {
       <input
         id="search-input"
         className="search-input"
-        placeholder="Search in Drive"
-        aria-label="Search in Drive"
+        placeholder="Search Pubky Drive"
+        aria-label="Search Pubky Drive"
         role="combobox"
         aria-expanded={open && suggestions.length > 0}
         aria-controls={listId}

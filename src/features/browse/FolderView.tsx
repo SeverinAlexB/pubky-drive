@@ -33,7 +33,7 @@ interface FolderViewProps {
 }
 
 /**
- * One folder's contents in My Drive or the Homeserver section, kept up to date by the event
+ * One folder's contents in Pubky Drive or the Homeserver section, kept up to date by the event
  * stream. See docs/spec/02-navigation.md.
  */
 export function FolderView({ scope, area, folder }: FolderViewProps) {
@@ -44,7 +44,7 @@ export function FolderView({ scope, area, folder }: FolderViewProps) {
 
   const load = useCallback(async (): Promise<ListItem[] | 'missing'> => {
     if (!path) return []
-    // The Homeserver section shows everything stored, including what My Drive hides.
+    // The Homeserver section shows everything stored, including what Pubky Drive hides.
     const options = { everything: scope === 'homeserver' }
     // An area root is simply empty until it has files; any other folder can disappear.
     const items =
@@ -70,7 +70,7 @@ export function FolderView({ scope, area, folder }: FolderViewProps) {
     )
   }
 
-  const sectionRoute: Route = scope === 'drive' ? { view: 'my-drive' } : { view: 'homeserver' }
+  const sectionRoute: Route = scope === 'drive' ? { view: 'drive' } : { view: 'homeserver' }
   const goUp = () => navigate(path === root ? sectionRoute : folderRoute(parentOf(path), scope))
   const writable = canWrite(access, path)
 
@@ -126,14 +126,14 @@ function isWithinAppFolder(path: StoragePath) {
 }
 
 /**
- * An item as the Homeserver section shows it: its folders open in this section, and Pubky
- * Drive's own folders and folder markers say what they are.
+ * An item as the Homeserver section shows it: its folders open in this section, and the app's
+ * own folders and folder markers say what they are.
  */
 function asHomeserverItem(item: ListItem): ListItem {
   const shown: ListItem = { ...item, scope: 'homeserver' }
   if (APP_FOLDERS.includes(item.path)) return { ...shown, badge: 'Pubky Drive' }
   if (item.path === DRIVE_ROOTS.public || item.path === DRIVE_ROOTS.private) {
-    return { ...shown, badge: 'My Drive files' }
+    return { ...shown, badge: 'Pubky Drive files' }
   }
   if (item.path === BIN_ROOT) {
     return {
@@ -164,7 +164,7 @@ interface BreadcrumbsProps {
 }
 
 /**
- * `My Drive › Public › photos ▾` or `Homeserver › /pub › pubky.app ▾`. Earlier segments open their
+ * `Pubky Drive › Public › photos ▾` or `Homeserver › /pub › pubky.app ▾`. Earlier segments open their
  * folder and accept dropped items.
  */
 function Breadcrumbs({ scope, area, root, path, writable }: BreadcrumbsProps) {
@@ -177,7 +177,7 @@ function Breadcrumbs({ scope, area, root, path, writable }: BreadcrumbsProps) {
   const crumbs = useMemo(() => {
     const segments = path.slice(root.length).split('/').filter(Boolean)
     return [
-      { label: scope === 'drive' ? 'My Drive' : 'Homeserver' },
+      { label: scope === 'drive' ? 'Pubky Drive' : 'Homeserver' },
       { label: areaLabel(scope, area), folder: root },
       ...segments.map((segment, index) => ({
         label: segment,
@@ -208,7 +208,7 @@ function Breadcrumbs({ scope, area, root, path, writable }: BreadcrumbsProps) {
     return newEntries.length > 0 ? [...newEntries, separator, ...folderEntries] : folderEntries
   }
 
-  const sectionRoute: Route = scope === 'drive' ? { view: 'my-drive' } : { view: 'homeserver' }
+  const sectionRoute: Route = scope === 'drive' ? { view: 'drive' } : { view: 'homeserver' }
 
   return (
     <nav className="breadcrumbs" aria-label="Folder path">

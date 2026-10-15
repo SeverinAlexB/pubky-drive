@@ -75,14 +75,14 @@
   margin-bottom: 16px;
   padding: 0 20px 0 16px;
   border: 0;
-  border-radius: 16px;
+  border-radius: 12px;
   background: var(--card);
   box-shadow: var(--shadow-raised);
   font-weight: 500;
 }
 
 .new-button:hover:not(:disabled) {
-  background: #edf2fc;
+  background: var(--accent-faint);
   box-shadow: var(--shadow-menu);
 }
 
@@ -98,7 +98,7 @@
   gap: 16px;
   height: 32px;
   padding: 0 12px 0 16px;
-  border-radius: 16px;
+  border-radius: 8px;
   color: var(--text);
   text-decoration: none;
 }
@@ -108,13 +108,14 @@
 }
 
 .sidebar-link:hover:not([aria-disabled='true']) {
-  background: rgb(68 71 70 / 8%);
+  background: var(--hover);
 }
 
 .sidebar-link.active {
-  background: var(--accent-soft);
+  background: var(--accent-faint);
+  box-shadow: inset 3px 0 0 var(--accent);
   font-weight: 600;
-  color: #001d35;
+  color: var(--on-accent-soft);
 }
 
 .sidebar-link[aria-disabled='true'] {

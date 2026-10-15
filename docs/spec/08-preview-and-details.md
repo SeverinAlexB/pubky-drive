@@ -22,7 +22,7 @@ translucent background (`rgba(0, 0, 0, 0.85)`).
 
 ## Details pane
 
-**View details** (info button, ⌥V then D) toggles a pane at the right of the
+**View details** (info button, ⇧D) toggles a pane at the right of the
 content card. The pane remembers being open.
 
 - **Header:** the item's icon and name, and a close button.

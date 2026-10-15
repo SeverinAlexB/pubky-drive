@@ -82,7 +82,7 @@ test('moving to the other area warns that it changes who can read the files', as
   await uploadFiles(page, [{ name: 'secret.txt', text: 's' }])
   await contextMenu(page, 'secret.txt', 'Organise', 'Move')
   const dialog = page.getByRole('dialog', { name: 'Move ‘secret.txt’' })
-  await dialog.getByRole('tab', { name: 'All locations' }).click()
+  await dialog.getByRole('tab', { name: 'Browse' }).click()
   await dialog.getByRole('option', { name: /^Public/ }).click()
   await expect(dialog).toContainText('These items will become public.')
   await dialog.getByRole('button', { name: 'Move' }).click()
@@ -202,4 +202,20 @@ test('the Modified filter keeps only items changed in the chosen period', async 
 
   await page.getByRole('button', { name: 'Clear modified filter' }).click()
   await expect(row(page, 'Folder')).toBeVisible()
+})
+
+test('⇧ shortcuts create a folder, switch the layout and show details', async ({ page }) => {
+  await signUp(page)
+  await openArea(page, 'Private')
+  await page.keyboard.press('Shift+N')
+  await expect(page.getByRole('dialog', { name: 'New folder' })).toBeVisible()
+  await page.keyboard.press('Escape')
+
+  await page.keyboard.press('Shift+L')
+  await expect(page.getByRole('radio', { name: 'Grid layout' })).toBeChecked()
+  await page.keyboard.press('Shift+L')
+  await expect(page.getByRole('radio', { name: 'List layout' })).toBeChecked()
+
+  await page.keyboard.press('Shift+D')
+  await expect(page.getByRole('button', { name: 'Hide details' }).first()).toBeVisible()
 })

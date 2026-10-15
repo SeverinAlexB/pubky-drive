@@ -2,8 +2,8 @@ import { expect, test } from 'vitest'
 import { parseRoute, routeHash, type Route } from './routes'
 
 test.each<[string, Route]>([
-  ['', { view: 'my-drive' }],
-  ['#/drive', { view: 'my-drive' }],
+  ['', { view: 'drive' }],
+  ['#/drive', { view: 'drive' }],
   ['#/drive/public', { view: 'folder', scope: 'drive', area: 'public', folder: '' }],
   [
     '#/drive/private/My%20Photos/2026',
@@ -18,7 +18,7 @@ test.each<[string, Route]>([
   ['#/bin', { view: 'bin' }],
   ['#/search?q=caf%C3%A9+menu', { view: 'search', query: 'café menu' }],
   ['#/view/pubkyabc/pub/x/a%20b.txt', { view: 'viewer', address: 'pubkyabc/pub/x/a%20b.txt' }],
-  ['#/unknown', { view: 'my-drive' }],
+  ['#/unknown', { view: 'drive' }],
 ])('parses %j', (hash, route) => {
   expect(parseRoute(hash)).toEqual(route)
 })

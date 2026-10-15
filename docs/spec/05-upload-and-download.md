@@ -5,9 +5,9 @@
 - **File upload** opens the browser's file picker with multiple selection.
 - **Folder upload** opens the folder picker. The folder structure is kept.
 - **Drag and drop:** dragging files or folders from the computer over the list
-  shows a blue outline around the list and the caption "Drop files to upload
+  shows an accent outline around the list and the caption "Drop files to upload
   to <folder>". Dropping on a folder row uploads into that folder.
-- Uploads go to the open folder. In My Drive they go to the Private area.
+- Uploads go to the open folder. In Pubky Drive they go to the Private area.
 
 ## Name conflicts
 

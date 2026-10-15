@@ -2,12 +2,11 @@
 
 # Pubky Drive
 
-A file explorer for your [Pubky](https://pubky.org) Homeserver, modelled on Google Drive. It
-runs entirely in the browser and talks directly to your Homeserver, without its own backend.
+A file explorer for your [Pubky](https://pubky.org) Homeserver. It runs entirely in the browser and talks directly to your Homeserver, without its own backend.
 
 ## Features
 
-- **Public and private areas.** "My Drive" shows your public files (`/pub/…`, readable by anyone
+- **Public and private areas.** "Pubky Drive" shows your public files (`/pub/…`, readable by anyone
   with the address) and your private files (`/priv/…`, readable only by you and apps you
   authorize).
 - **Homeserver section** for browsing, and optionally managing, everything on your Homeserver,
@@ -32,7 +31,7 @@ files. Homeservers can't share files with specific people, so sharing means maki
 ## Access levels
 
 When you sign in with [Pubky Ring](https://pubkyring.app/), Pubky Drive asks only for its own
-folder. **My Drive** (Public and Private) always shows that folder:
+folder. **Pubky Drive** (Public and Private) always shows that folder:
 `/pub/pubky-drive/files/` and `/priv/pubky-drive/files/`.
 
 The **Homeserver** section in the sidebar shows your whole storage, `/pub/` and `/priv/`,
@@ -41,7 +40,7 @@ Pubky Ring:
 
 | Level            | Capabilities requested                       | What you can do                               |
 | ---------------- | -------------------------------------------- | --------------------------------------------- |
-| Drive folder     | `/pub/pubky-drive/:rw,/priv/pubky-drive/:rw` | Everything in My Drive, Starred and Bin       |
+| Drive folder     | `/pub/pubky-drive/:rw,/priv/pubky-drive/:rw` | Everything in Pubky Drive, Starred and Bin       |
 | View all files   | The Drive folder, plus `/pub/:r,/priv/:r`    | Also browse, preview and download any file    |
 | Manage all files | `/pub/:rw,/priv/:rw`                         | Also create, rename, move and delete any file |
 
@@ -96,7 +95,7 @@ static host works without rewrite rules. Production builds only offer Pubky Ring
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | `npm run dev`   | Starts the development server.                                                                                                 |
 | `npm test`      | Runs the unit tests (Vitest). They don't need a Homeserver.                                                                    |
-| `npm run e2e`   | Runs the browser tests (Playwright, with your installed Google Chrome) against the local testnet. Start `pubky-testnet` first. |
+| `npm run e2e`   | Runs the browser tests (Playwright, with your installed Chrome) against the local testnet. Start `pubky-testnet` first. |
 | `npm run check` | Checks formatting (Prettier) and lints the code and workflows.                                                                 |
 | `npm run build` | Type-checks and builds the app.                                                                                                |
 
@@ -121,10 +120,9 @@ The code is organised by feature:
 
 ## Documentation
 
-- [Design](docs/design.md): how Drive features map onto a Homeserver, including path encoding,
+- [Design](docs/design.md): how the features map onto a Homeserver, including path encoding,
   folders, the bin and the operations the Homeserver doesn't provide.
 - [Specification](docs/spec/README.md): what each part of the interface shows and does.
-- [Research notes](docs/research.md): the Google Drive behaviour that the specification is based on.
 
 ## Limitations
 

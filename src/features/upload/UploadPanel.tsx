@@ -71,15 +71,17 @@ function UploadStatusIcon({ row, onRetry }: { row: UploadRow; onRetry: (id: numb
     case 'queued':
       return <span className="upload-queued" aria-label="Waiting" />
     case 'uploading':
-      return <LoaderCircle size={20} className="spinner" color="#0b57d0" aria-label="Uploading" />
+      return (
+        <LoaderCircle size={20} className="spinner" color="var(--accent)" aria-label="Uploading" />
+      )
     case 'done':
-      return <CircleCheck size={22} color="#fff" fill="#146c2e" aria-label="Uploaded" />
+      return <CircleCheck size={22} color="#fff" fill="var(--success)" aria-label="Uploaded" />
     case 'canceled':
       return <span className="muted">Canceled</span>
     case 'failed':
       return (
         <span className="upload-failed">
-          <CircleAlert size={20} color="#b3261e" aria-label={`Failed: ${row.error}`}>
+          <CircleAlert size={20} color="var(--danger)" aria-label={`Failed: ${row.error}`}>
             <title>{row.error}</title>
           </CircleAlert>
           <button

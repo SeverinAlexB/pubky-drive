@@ -37,7 +37,7 @@ test('signing out in one tab signs out the other tabs', async ({ page, context }
   await signUp(page)
   const other = await context.newPage()
   await other.goto('/')
-  await expect(other.getByRole('heading', { name: 'My Drive' })).toBeVisible()
+  await expect(other.getByRole('heading', { name: 'Pubky Drive' })).toBeVisible()
 
   await page.getByRole('button', { name: /^Account/ }).click()
   await page.getByRole('menuitem', { name: 'Sign out' }).click()

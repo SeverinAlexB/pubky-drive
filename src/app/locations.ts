@@ -1,11 +1,11 @@
-// Where an item is, in the terms the user sees: a section (My Drive or Homeserver), an area, and
+// Where an item is, in the terms the user sees: a section (Pubky Drive or Homeserver), an area, and
 // the folders inside it.
 
 import { DRIVE_ROOTS, HOMESERVER_ROOTS } from '../drive/access'
 import { isWithin, parentOf, type Area, type StoragePath } from '../drive/paths'
 import type { Route, Scope } from './routes'
 
-/** Names of the areas in My Drive. */
+/** Names of the areas in Pubky Drive. */
 export const AREA_LABELS: Record<Area, string> = {
   public: 'Public',
   private: 'Private',
@@ -31,7 +31,7 @@ export interface Location {
 
 /**
  * Where `path` is. Without `scope`, where its data belongs: paths inside the Drive folders belong to
- * My Drive, everything else to the homeserver. With a `scope`, where that section shows it: the
+ * Pubky Drive, everything else to the homeserver. With a `scope`, where that section shows it: the
  * Homeserver section also shows the Drive folders, as ordinary folders.
  */
 export function locate(path: StoragePath, scope?: Scope): Location {
@@ -75,7 +75,7 @@ export function matchingFolderInOtherArea(path: StoragePath): StoragePath {
   return `${otherRoot}${parentOf(path).slice(root.length)}` as StoragePath
 }
 
-/** Whether `path` is the root of an area in My Drive or the Homeserver section. */
+/** Whether `path` is the root of an area in Pubky Drive or the Homeserver section. */
 export function isAreaRoot(path: StoragePath) {
   return locate(path).segments.length === 0
 }

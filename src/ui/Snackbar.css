@@ -27,14 +27,14 @@
 .snackbar-action {
   border: 0;
   background: transparent;
-  color: #a8c7fa;
+  color: #7fd6cb;
   font-weight: 500;
   padding: 8px 12px;
   border-radius: 4px;
 }
 
 .snackbar-action:hover {
-  background: rgb(168 199 250 / 12%);
+  background: rgb(127 214 203 / 12%);
 }
 
 .snackbar-close {

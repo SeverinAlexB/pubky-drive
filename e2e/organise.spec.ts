@@ -11,7 +11,7 @@ test.beforeEach(async ({ page }) => {
   await createFolder(page, 'Archive')
 })
 
-test('rename selects the whole name, as Drive does, and can be undone', async ({ page }) => {
+test('rename selects the whole name and can be undone', async ({ page }) => {
   await contextMenu(page, 'report.txt', 'Rename')
   const field = page.getByRole('textbox', { name: 'Name' })
   await expect(field).toHaveValue('report.txt')
@@ -42,7 +42,7 @@ test('make a copy, then move it with the move dialog', async ({ page }) => {
 
   await contextMenu(page, 'Copy of notes.md', 'Organise', 'Move')
   const dialog = page.getByRole('dialog', { name: 'Move ‘Copy of notes.md’' })
-  await dialog.getByRole('tab', { name: 'All locations' }).click()
+  await dialog.getByRole('tab', { name: 'Browse' }).click()
   await expect(dialog).toContainText('Current location: Private')
   await expect(dialog.getByRole('button', { name: 'Back' })).toBeDisabled()
   await dialog
@@ -132,7 +132,7 @@ test('copy and paste into another folder, then undo and redo with the keyboard',
 
   await row(page, 'report.txt').click()
   await page.keyboard.press('Meta+c')
-  await expect(page.getByRole('status')).toContainText('Item copied to clipboard')
+  await expect(page.getByRole('status')).toContainText('Copied ‘report.txt’')
   await row(page, 'Target').dblclick()
   await expect(page.getByRole('navigation', { name: 'Folder path' })).toContainText('Target')
   await page.keyboard.press('Meta+v')
@@ -140,10 +140,10 @@ test('copy and paste into another folder, then undo and redo with the keyboard',
   await expect(row(page, 'Copy of report.txt')).toBeVisible()
 
   await page.keyboard.press('Meta+z')
-  await expect(page.getByRole('status')).toContainText('Action undone')
+  await expect(page.getByRole('status')).toContainText('Undone')
   await expect(row(page, 'Copy of report.txt')).toHaveCount(0)
   await page.keyboard.press('Meta+y')
-  await expect(page.getByRole('status')).toContainText('Action redone')
+  await expect(page.getByRole('status')).toContainText('Redone')
   await expect(row(page, 'Copy of report.txt')).toBeVisible()
 })
 
@@ -152,7 +152,7 @@ test('cut and paste moves the item once, and undo moves it back', async ({ page 
 
   await row(page, 'notes.md').click()
   await page.keyboard.press('Meta+x')
-  await expect(page.getByRole('status')).toContainText('Item cut to clipboard')
+  await expect(page.getByRole('status')).toContainText('Cut ‘notes.md’, ready to paste')
   await row(page, 'Target').dblclick()
   await expect(page.getByRole('navigation', { name: 'Folder path' })).toContainText('Target')
   await page.keyboard.press('Meta+v')
@@ -164,7 +164,7 @@ test('cut and paste moves the item once, and undo moves it back', async ({ page 
   await expect(row(page, 'notes.md')).toHaveCount(1)
 
   await page.keyboard.press('Meta+z')
-  await expect(page.getByRole('status')).toContainText('Action undone')
+  await expect(page.getByRole('status')).toContainText('Undone')
   await expect(row(page, 'notes.md')).toHaveCount(0)
   await page
     .getByRole('navigation', { name: 'Folder path' })
@@ -191,19 +191,14 @@ test('undo goes back through several actions, newest first', async ({ page }) =>
   await expect(row(page, 'b.txt')).toHaveCount(0)
 })
 
-test('the Move dialog suggests recent folders, lists starred ones and searches', async ({
-  page,
-}) => {
+test('the Move dialog lists recent folders, lists starred ones and searches', async ({ page }) => {
   await createFolder(page, 'Photos')
   await contextMenu(page, 'Photos', 'Organise', 'Add to starred')
 
   await contextMenu(page, 'report.txt', 'Organise', 'Move')
   const dialog = page.getByRole('dialog', { name: 'Move ‘report.txt’' })
-  await expect(dialog.getByRole('tab', { name: 'Suggested' })).toHaveAttribute(
-    'aria-selected',
-    'true',
-  )
-  await expect(dialog).toContainText('Select a location to show the folder path')
+  await expect(dialog.getByRole('tab', { name: 'Recent' })).toHaveAttribute('aria-selected', 'true')
+  await expect(dialog).toContainText('Choose a folder')
   await expect(dialog.getByRole('option', { name: /^Archive/ })).toContainText('Private')
   await dialog.getByRole('option', { name: /^Archive/ }).click()
   await expect(dialog).toContainText('Move to: Private › Archive')

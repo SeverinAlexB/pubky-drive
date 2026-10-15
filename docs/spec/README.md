@@ -1,7 +1,6 @@
 # Pubky Drive specification
 
-These documents describe what Pubky Drive shows and how it behaves. They are
-based on the [Google Drive research notes](../research.md); the
+These documents describe what Pubky Drive shows and how it behaves. The
 [design document](../design.md) explains how each feature maps onto a Pubky
 Homeserver.
 

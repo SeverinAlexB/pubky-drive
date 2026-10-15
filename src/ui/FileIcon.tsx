@@ -13,14 +13,14 @@ import {
 import { fileTypeOf, type DriveItem, type FileType } from '../drive/items'
 
 const ICONS: Record<FileType, { icon: LucideIcon; color: string }> = {
-  folder: { icon: Folder, color: '#444746' },
-  image: { icon: FileImage, color: '#d93025' },
-  pdf: { icon: FileText, color: '#d93025' },
-  text: { icon: FileText, color: '#1a73e8' },
-  audio: { icon: FileAudio, color: '#e37400' },
-  video: { icon: FileVideo, color: '#d93025' },
-  archive: { icon: FileArchive, color: '#5f6368' },
-  other: { icon: File, color: '#5f6368' },
+  folder: { icon: Folder, color: '#4a4f57' },
+  image: { icon: FileImage, color: '#c2410c' },
+  pdf: { icon: FileText, color: '#b91c1c' },
+  text: { icon: FileText, color: '#1d4ed8' },
+  audio: { icon: FileAudio, color: '#a16207' },
+  video: { icon: FileVideo, color: '#7e22ce' },
+  archive: { icon: FileArchive, color: '#57534e' },
+  other: { icon: File, color: '#64748b' },
 }
 
 interface FileIconProps {
@@ -33,7 +33,7 @@ interface FileIconProps {
 export function FileIcon({ item, areaRoot, size = 20 }: FileIconProps) {
   if (areaRoot) {
     const AreaIcon = areaRoot === 'public' ? Globe : Lock
-    return <AreaIcon size={size} color="#444746" aria-hidden className="file-icon" />
+    return <AreaIcon size={size} color="#4a4f57" aria-hidden className="file-icon" />
   }
 
   const { icon: Icon, color } = ICONS[fileTypeOf(item)]

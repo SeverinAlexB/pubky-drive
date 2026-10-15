@@ -222,7 +222,7 @@ export function useItemActions() {
       return binned
     }
 
-    /** "‘a.txt’ moved from ‘Work’ to ‘Archive’", naming folders as Drive does. */
+    /** "‘a.txt’ moved from ‘Work’ to ‘Archive’", naming folders by their own name. */
     function movedMessage(items: readonly DriveItem[], target: StoragePath) {
       const shortName = (folder: StoragePath) =>
         isAreaRoot(folder) ? folderLabel(folder) : nameOf(folder)
@@ -245,7 +245,7 @@ export function useItemActions() {
     }
 
     /**
-     * Asks before items move between My Drive and the rest of the homeserver, because that changes
+     * Asks before items move between Pubky Drive and the rest of the homeserver, because that changes
      * which apps find them. Resolves to true when no confirmation is needed.
      */
     async function confirmSectionChange(items: readonly DriveItem[], target: StoragePath) {
@@ -483,25 +483,21 @@ export function useItemActions() {
       /** Undoes `action`, or else the latest action (⌘Z). */
       undo(action?: Undoable) {
         return attempt(async () => {
-          if (await history.undo(action)) notify('Action undone')
+          if (await history.undo(action)) notify('Undone')
         })
       },
 
       /** Redoes the latest undone action (⌘Y, ⇧⌘Z). */
       redo() {
         return attempt(async () => {
-          if (await history.redo()) notify('Action redone')
+          if (await history.redo()) notify('Redone')
         })
       },
 
       /** ⌘C: remembers the items for pasting, and puts links to public ones on the clipboard. */
       copyToClipboard(items: DriveItem[]) {
         clipboard.current = { mode: 'copy', items }
-        notify(
-          items.length === 1
-            ? 'Item copied to clipboard'
-            : `${items.length} items copied to clipboard`,
-        )
+        notify(items.length === 1 ? `Copied ‘${items[0].name}’` : `Copied ${items.length} items`)
         const links = items
           .filter((item) => item.area === 'public')
           .map((item) => viewerLink(ownerZ32, item.path))
@@ -512,7 +508,7 @@ export function useItemActions() {
       cutToClipboard(items: DriveItem[]) {
         clipboard.current = { mode: 'cut', items }
         notify(
-          items.length === 1 ? 'Item cut to clipboard' : `${items.length} items cut to clipboard`,
+          `Cut ${items.length === 1 ? `‘${items[0].name}’` : `${items.length} items`}, ready to paste`,
         )
       },
 
@@ -522,7 +518,7 @@ export function useItemActions() {
         if (!pending || !canWrite(access, target)) return
         if (!(await confirmBecomingPublic(pending.items, target))) return
         if (pending.mode === 'cut') {
-          // Cut items move once; pasting again does nothing, as in Drive.
+          // Cut items move once; pasting again does nothing.
           clipboard.current = undefined
           await actions.moveTo(pending.items, target)
           return

@@ -3,11 +3,11 @@
 import { useSyncExternalStore } from 'react'
 import type { Area } from '../drive/paths'
 
-/** The Drive folders (My Drive), or the whole homeserver storage. */
+/** The Drive folders (Pubky Drive), or the whole homeserver storage. */
 export type Scope = 'drive' | 'homeserver'
 
 export type Route =
-  | { view: 'my-drive' }
+  | { view: 'drive' }
   | { view: 'homeserver' }
   /**
    * A folder in one area of a scope. `folder` is the path inside the area root, without leading
@@ -31,7 +31,7 @@ export function parseRoute(hash: string): Route {
       const scope = segments[0]
       const area = segments[1]
       if (area !== 'public' && area !== 'private')
-        return { view: scope === 'drive' ? 'my-drive' : 'homeserver' }
+        return { view: scope === 'drive' ? 'drive' : 'homeserver' }
       return { view: 'folder', scope, area, folder: segments.slice(2).map(safeDecode).join('/') }
     }
     case 'recent':
@@ -43,13 +43,13 @@ export function parseRoute(hash: string): Route {
     case 'view':
       return { view: 'viewer', address: pathPart.slice('view/'.length) }
     default:
-      return { view: 'my-drive' }
+      return { view: 'drive' }
   }
 }
 
 export function routeHash(route: Route): string {
   switch (route.view) {
-    case 'my-drive':
+    case 'drive':
       return '#/drive'
     case 'folder': {
       const folder = route.folder.split('/').filter(Boolean).map(encodeURIComponent).join('/')

@@ -68,7 +68,7 @@ test('search suggests matches and lists results with their location', async ({ p
   await openArea(page, 'Public')
   await uploadFiles(page, [{ name: 'menu-public.txt', text: 'Bread' }])
 
-  const search = page.getByRole('combobox', { name: 'Search in Drive' })
+  const search = page.getByRole('combobox', { name: 'Search Pubky Drive' })
   await search.fill('cafe')
   await expect(page.getByRole('listbox', { name: 'Suggestions' })).toContainText('Café')
   await search.fill('menu')

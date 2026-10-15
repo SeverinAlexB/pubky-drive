@@ -53,11 +53,11 @@ export function PublicViewer({ address }: { address: string }) {
   return (
     <div className="viewer">
       <header className="viewer-header">
-        <a className="shell-logo" href={routeHash({ view: 'my-drive' })}>
-          <HardDrive size={28} color="#0b57d0" aria-hidden />
+        <a className="shell-logo" href={routeHash({ view: 'drive' })}>
+          <HardDrive size={28} color="var(--accent)" aria-hidden />
           <span>Pubky Drive</span>
         </a>
-        <a className="button button-filled" href={routeHash({ view: 'my-drive' })}>
+        <a className="button button-filled" href={routeHash({ view: 'drive' })}>
           Sign in
         </a>
       </header>

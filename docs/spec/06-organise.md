@@ -14,8 +14,8 @@ and Esc cancels.
 
 ## Rename
 
-- Dialog "Rename" with the current name, fully selected (extension included,
-  as in Drive). Buttons **Cancel** and **OK**.
+- Dialog "Rename" with the current name, fully selected, extension included.
+  Buttons **Cancel** and **OK**.
 - Snackbar: "‘old’ renamed to ‘new’" with **Undo**.
 - Renaming a folder moves every file inside it, with progress in the snackbar
   ("Renaming 12 files…").
@@ -36,23 +36,22 @@ Creates "Copy of name" in the same folder (with a number if taken). Snackbar:
 
 - Dialog "Move ‘name’" (or "Move N items"):
   - "Current location:" followed by a chip with the folder name.
-  - Tabs **Suggested** (selected when the dialog opens), **Starred** and **All
-    locations**, and a **Search** button.
-    - Suggested: up to 8 Drive folders where files were written most recently,
+  - Tabs **Recent** (selected when the dialog opens), **Starred** and
+    **Browse**, and a **Search** button.
+    - Recent: up to 8 Drive folders where files were written most recently,
       from the session's event history, filled up with the folders next to the
       moved items.
     - Starred: the starred folders, by name.
-    - All locations: a folder browser starting in the current folder's parent,
+    - Browse: a folder browser starting in the current folder's parent,
       with a back arrow and the browsed folder's name at the top, then its
       subfolders.
     - Search replaces the tabs with a field ("Search folders") that lists Drive
       folders whose name contains the text. Esc or × closes it.
-  - Folders in Suggested, Starred and search results show their location under
+  - Folders in Recent, Starred and search results show their location under
     the name. A single click selects a folder; a double click, or the › button
-    at the row's end, opens it in All locations.
-  - "Move to: <path>" under the list, for the selected folder or, in All
-    locations, the browsed one. Otherwise: "Select a location to show the
-    folder path".
+    at the row's end, opens it in Browse.
+  - "Move to: <path>" under the list, for the selected folder or, in Browse,
+    the browsed one. Otherwise: "Choose a folder".
   - **Cancel** and **Move**. Move is disabled when the target is the current
     location, or is inside the moved folder.
 - Moving between the Public and Private areas warns what changes, for example:
@@ -84,8 +83,7 @@ the session's undo history (the last 50 actions).
 - The snackbar's **Undo** reverses that action, as long as the snackbar is
   visible.
 - ⌘Z reverses the latest action that isn't undone yet, and ⌘Y or ⇧⌘Z redoes
-  the latest undone one. Snackbar: "Action undone" or "Action redone", as in
-  Drive.
+  the latest undone one. Snackbar: "Undone" or "Redone".
 - A new action clears what could be redone. Creating folders, uploading and
   deleting forever can't be undone.
 - Undoing a copy deletes it; redoing makes it again.

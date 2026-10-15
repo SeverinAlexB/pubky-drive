@@ -40,7 +40,7 @@ export function AppFolderBanner() {
       <TriangleAlert size={20} aria-hidden />
       <p>
         Pubky Drive manages this folder. Changing <code>bin/</code> or <code>app/</code> can break
-        the bin and starred items; changing <code>files/</code> here is the same as in My Drive.
+        the bin and starred items; changing <code>files/</code> here is the same as in Pubky Drive.
       </p>
     </div>
   )

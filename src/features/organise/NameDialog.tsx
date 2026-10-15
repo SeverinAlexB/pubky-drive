@@ -30,7 +30,7 @@ export function NameDialog({
   const problem = nameProblem(name)
 
   useEffect(() => {
-    // The whole name is selected, extension included, as in Drive.
+    // The whole name is selected, extension included, so typing replaces it.
     const field = input.current
     if (!field) return
     field.focus()

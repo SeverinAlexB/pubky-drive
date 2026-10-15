@@ -40,8 +40,8 @@
 
 .layout-toggle {
   display: flex;
-  border: 1px solid #747775;
-  border-radius: 16px;
+  border: 1px solid var(--text-faint);
+  border-radius: 8px;
   overflow: hidden;
 }
 
@@ -58,17 +58,17 @@
 }
 
 .layout-toggle button + button {
-  border-left: 1px solid #747775;
+  border-left: 1px solid var(--text-faint);
 }
 
 .layout-toggle button[aria-checked='true'] {
   background: var(--accent-soft);
-  color: #001d35;
+  color: var(--on-accent-soft);
 }
 
 .icon-button.pressed {
   background: var(--accent-soft);
-  color: #001d35;
+  color: var(--on-accent-soft);
 }
 
 /* Filter and selection bars */
@@ -94,7 +94,7 @@
   gap: 4px;
   height: 32px;
   padding: 0 12px 0 16px;
-  border: 1px solid #747775;
+  border: 1px solid var(--text-faint);
   border-radius: 8px;
   background: var(--card);
   color: var(--text-muted);
@@ -108,13 +108,13 @@
 .filter-chip.active {
   border-color: transparent;
   background: var(--accent-soft);
-  color: #001d35;
+  color: var(--on-accent-soft);
 }
 
 .selection-bar {
   height: 40px;
   margin: 4px 16px;
-  border-radius: 20px;
+  border-radius: 8px;
   background: var(--surface-strong);
 }
 
@@ -250,7 +250,7 @@
   height: 24px;
   border-radius: 50%;
   background: var(--accent-soft);
-  color: #001d35;
+  color: var(--on-accent-soft);
 }
 
 .file-list-group {
@@ -280,7 +280,8 @@
 }
 
 .file-row.selected {
-  background: var(--accent-soft);
+  background: var(--accent-faint);
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 .file-row.drop-active,
@@ -377,11 +378,13 @@
 }
 
 .file-tile:hover {
-  background: #dde3ea;
+  background: var(--surface-strong);
 }
 
 .file-tile.selected {
-  background: var(--accent-soft);
+  background: var(--accent-faint);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .file-tile-header {

@@ -72,7 +72,7 @@ test('manage access changes other apps’ files, and moving them into the Drive 
 
   await contextMenu(page, 'other-app.json', 'Organise', 'Move')
   const move = page.getByRole('dialog', { name: 'Move ‘other-app.json’' })
-  await move.getByRole('tab', { name: 'All locations' }).click()
+  await move.getByRole('tab', { name: 'Browse' }).click()
   await move.getByRole('option', { name: /^Private/ }).click()
   await move.getByRole('button', { name: 'Move' }).click()
   const confirm = page.getByRole('dialog', { name: 'Move into your Drive?' })
@@ -125,7 +125,7 @@ test('the Homeserver section lists everything stored, with the app’s folders e
   ).toBeVisible()
   await expect(row(page, 'bin')).toContainText('Bin')
   await expect(row(page, 'app')).toContainText('App data')
-  await expect(row(page, 'files')).toContainText('My Drive files')
+  await expect(row(page, 'files')).toContainText('Pubky Drive files')
 
   await row(page, 'files').dblclick()
   await row(page, 'Empty').dblclick()

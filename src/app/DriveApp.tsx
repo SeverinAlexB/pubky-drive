@@ -13,7 +13,7 @@ import {
   Star,
   Trash2,
 } from 'lucide-react'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { canWrite, homeserverLevel, HOMESERVER_ROOTS, type DriveAccess } from '../drive/access'
 import { describeError } from '../drive/errors'
 import { useAccessDialog } from '../features/access/AccessDialog'
@@ -24,7 +24,7 @@ import { useItemActions } from '../features/actions/useItemActions'
 import { BinView } from '../features/bin/BinView'
 import { shortKey } from '../features/browse/format'
 import { FolderView } from '../features/browse/FolderView'
-import { MyDriveView } from '../features/browse/MyDriveView'
+import { DriveHomeView } from '../features/browse/DriveHomeView'
 import { useDropTarget } from '../features/browse/dragAndDrop'
 import { RecentView } from '../features/recent/RecentView'
 import { SearchField } from '../features/search/SearchField'
@@ -86,8 +86,8 @@ function Shell({ onSignOut }: { onSignOut: () => Promise<void> }) {
         >
           <MenuIcon size={22} />
         </button>
-        <a className="shell-logo" href={routeHash({ view: 'my-drive' })}>
-          <HardDrive size={28} color="#0b57d0" aria-hidden />
+        <a className="shell-logo" href={routeHash({ view: 'drive' })}>
+          <HardDrive size={28} color="var(--accent)" aria-hidden />
           <span>Pubky Drive</span>
         </a>
         <SearchField
@@ -126,7 +126,7 @@ function RouteView({ route }: { route: Route }) {
     case 'search':
       return <SearchResultsView key={route.query} query={route.query} />
     default:
-      return <MyDriveView />
+      return <DriveHomeView />
   }
 }
 
@@ -185,9 +185,9 @@ function Sidebar({ route }: { route: Route }) {
       <ul className="sidebar-nav">
         <NavItem
           icon={<HardDrive size={20} />}
-          label="My Drive"
-          route={{ view: 'my-drive' }}
-          active={current === 'my-drive'}
+          label="Pubky Drive"
+          route={{ view: 'drive' }}
+          active={current === 'drive'}
         />
         {(['public', 'private'] as const).map((area) => (
           <NavItem
@@ -376,12 +376,10 @@ function useNarrowedAccessNotice() {
   }, [access, ownerZ32, notify])
 }
 
-const CHORD_TIMEOUT_MS = 1500
-
 /**
  * Shortcuts that work anywhere: `/` (search), ⌘/ (shortcuts), ⌘Z and ⌘Y (undo, redo), ⌘V
- * (paste into the open folder), Ctrl+C then F/U/I (new folder, upload files, upload folder) and
- * ⌥V then L/D (layout, details).
+ * (paste into the open folder), ⇧N, ⇧U and ⇧I (new folder, upload files, upload folder) and ⇧L
+ * and ⇧D (layout, details).
  */
 function useGlobalShortcuts(route: Route) {
   const actions = useItemActions()
@@ -391,7 +389,6 @@ function useGlobalShortcuts(route: Route) {
   const { folder, caption } = useTargetFolder(route)
   // Paste only into the open folder, not into the fallback that New uses outside folders.
   const pasteTarget = route.view === 'folder' && !caption ? folder : undefined
-  const chord = useRef<{ prefix: 'create' | 'view'; at: number }>(undefined)
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -399,21 +396,18 @@ function useGlobalShortcuts(route: Route) {
       if (target.closest('input, textarea, dialog, [role=menu]')) return
 
       const command = event.metaKey || event.ctrlKey
-      const pending =
-        chord.current && Date.now() - chord.current.at < CHORD_TIMEOUT_MS
-          ? chord.current.prefix
-          : undefined
-      chord.current = undefined
+      const shiftOnly = event.shiftKey && !command && !event.altKey
 
-      if (pending === 'create' && folder) {
-        if (event.code === 'KeyF') actions.newFolder(folder)
-        else if (event.code === 'KeyU') uploads.pickFiles(folder)
-        else if (event.code === 'KeyI') uploads.pickFolder(folder)
-        else return
-      } else if (pending === 'view') {
-        if (event.code === 'KeyL') setLayout(layout === 'list' ? 'grid' : 'list')
-        else if (event.code === 'KeyD') setDetailsOpen(!detailsOpen)
-        else return
+      if (shiftOnly && event.code === 'KeyN' && folder) {
+        actions.newFolder(folder)
+      } else if (shiftOnly && event.code === 'KeyU' && folder) {
+        uploads.pickFiles(folder)
+      } else if (shiftOnly && event.code === 'KeyI' && folder) {
+        uploads.pickFolder(folder)
+      } else if (shiftOnly && event.code === 'KeyL') {
+        setLayout(layout === 'list' ? 'grid' : 'list')
+      } else if (shiftOnly && event.code === 'KeyD') {
+        setDetailsOpen(!detailsOpen)
       } else if (command && !event.shiftKey && event.code === 'KeyZ') {
         void actions.undo()
       } else if (command && (event.code === 'KeyY' || (event.shiftKey && event.code === 'KeyZ'))) {
@@ -424,13 +418,6 @@ function useGlobalShortcuts(route: Route) {
         document.getElementById('search-input')?.focus()
       } else if (event.key === '/' && (event.metaKey || event.ctrlKey)) {
         openDialog((close) => <ShortcutsDialog onClose={close} />)
-      } else if (event.ctrlKey && !event.metaKey && event.code === 'KeyC') {
-        chord.current = { prefix: 'create', at: Date.now() }
-        return
-      } else if (event.altKey && event.code === 'KeyV') {
-        chord.current = { prefix: 'view', at: Date.now() }
-        event.preventDefault()
-        return
       } else {
         return
       }
@@ -490,16 +477,16 @@ const SHORTCUT_GROUPS: [string, [string, string][]][] = [
   [
     'Create',
     [
-      ['New folder', 'Ctrl+C then F'],
-      ['Upload files', 'Ctrl+C then U'],
-      ['Upload folder', 'Ctrl+C then I'],
+      ['New folder', '⇧N'],
+      ['Upload files', '⇧U'],
+      ['Upload folder', '⇧I'],
     ],
   ],
   [
     'View',
     [
-      ['Toggle list and grid', '⌥V then L'],
-      ['Show or hide details', '⌥V then D'],
+      ['Toggle list and grid', '⇧L'],
+      ['Show or hide details', '⇧D'],
       ['Show keyboard shortcuts', '⌘/'],
     ],
   ],

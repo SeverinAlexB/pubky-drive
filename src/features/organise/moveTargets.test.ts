@@ -2,7 +2,7 @@ import { expect, test } from 'vitest'
 import { itemFromPath } from '../../drive/items'
 import type { StoragePath } from '../../drive/paths'
 import type { StorageEvent } from '../../pubky/events'
-import { starredFolders, suggestedFolders } from './moveTargets'
+import { starredFolders, recentFolders } from './moveTargets'
 
 const ROOT = '/priv/pubky-drive/files/'
 const folder = (name: string) => itemFromPath(`${ROOT}${name}/` as StoragePath)
@@ -12,7 +12,7 @@ const event = (type: 'PUT' | 'DEL', path: string, cursor: number): StorageEvent 
   cursor: String(cursor),
 })
 
-test('suggests existing folders with the newest writes first, each once', () => {
+test('lists existing folders with the newest writes first, each once', () => {
   const folders = [folder('Photos'), folder('Work'), folder('Old')]
   const history = [
     event('PUT', 'Work/b.txt', 5),
@@ -23,13 +23,11 @@ test('suggests existing folders with the newest writes first, each once', () => 
   ]
 
   const elsewhere = '/priv/pubky-drive/files/Elsewhere/' as StoragePath
-  expect(suggestedFolders(history, folders, elsewhere).map((each) => each.name)).toEqual([
+  expect(recentFolders(history, folders, elsewhere).map((each) => each.name)).toEqual([
     'Work',
     'Photos',
   ])
-  expect(suggestedFolders(history, folders, elsewhere, 1).map((each) => each.name)).toEqual([
-    'Work',
-  ])
+  expect(recentFolders(history, folders, elsewhere, 1).map((each) => each.name)).toEqual(['Work'])
 })
 
 test('fills up with the folders next to the moved items', () => {
@@ -40,11 +38,8 @@ test('fills up with the folders next to the moved items', () => {
   ]
   const history = [event('PUT', 'Work/b.txt', 1)]
 
-  expect(suggestedFolders(history, folders, ROOT).map((each) => each.name)).toEqual([
-    'Work',
-    'Photos',
-  ])
-  expect(suggestedFolders([], folders, ROOT).map((each) => each.name)).toEqual(['Photos', 'Work'])
+  expect(recentFolders(history, folders, ROOT).map((each) => each.name)).toEqual(['Work', 'Photos'])
+  expect(recentFolders([], folders, ROOT).map((each) => each.name)).toEqual(['Photos', 'Work'])
 })
 
 test('lists starred folders that exist, by name', () => {

@@ -9,14 +9,14 @@ choosing an item, and support arrow-key navigation.
 
 Opened from the **New** button or the current-folder menu.
 
-- New folder (`Ctrl+C then F`)
+- New folder (`⇧N`)
 
 ---
 
-- File upload (`Ctrl+C then U`)
-- Folder upload (`Ctrl+C then I`)
+- File upload (`⇧U`)
+- Folder upload (`⇧I`)
 
-In My Drive, which only contains the two areas, the New menu creates items in
+In Pubky Drive, which only contains the two areas, the New menu creates items in
 the **Private** area and says so in a small caption ("Adds to Private").
 
 ## Item context menu
@@ -38,7 +38,7 @@ For a **file**:
 
 - Share › Share, Copy link
 - Organise › Move (⌥⌘M), Add to starred / Remove from starred (⌥⌘S)
-- File information › Details (⌥V then D)
+- File information › Details (⇧D)
 
 ---
 
@@ -94,10 +94,10 @@ selection).
 | Redo                    | ⌘Y or ⇧⌘Z           |
 | Go up one folder        | ⌥↑                  |
 | Search                  | `/`                 |
-| New folder              | Ctrl+C then F       |
-| Upload files            | Ctrl+C then U       |
-| Toggle list and grid    | ⌥V then L           |
-| Show or hide details    | ⌥V then D           |
+| New folder              | ⇧N                  |
+| Upload files            | ⇧U                  |
+| Toggle list and grid    | ⇧L                  |
+| Show or hide details    | ⇧D                  |
 | Show keyboard shortcuts | ⌘/                  |
 
 ⌘ is Ctrl on Windows and Linux. Shortcuts don't fire while a text field has
@@ -105,12 +105,11 @@ focus, except Esc.
 
 ## Copy, cut and paste
 
-- ⌘C on selected items: snackbar "Item copied to clipboard" or "N items
-  copied to clipboard". Like Drive, which puts the items' links on the system
-  clipboard, the app copies the viewer links of public items; private items
-  have no link.
-- ⌘X: "Item cut to clipboard" or "N items cut to clipboard". Needs write
-  access.
+- ⌘C on selected items: snackbar "Copied ‘name’" or "Copied N items". It
+  also puts the viewer links of public items on the system clipboard, so they
+  can be pasted into other apps; private items have no link.
+- ⌘X: "Cut ‘name’, ready to paste" or "Cut N items, ready to paste". Needs
+  write access.
 - ⌘V in an open folder with write access:
   - after a copy, creates "Copy of name" for each item. Snackbar: "Created
     ‘Copy of name’" or "Created N copies", with **Undo**. Pasting again makes

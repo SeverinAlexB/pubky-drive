@@ -3,9 +3,9 @@ import type { Scope } from '../../app/routes'
 import type { Area, StoragePath } from '../../drive/paths'
 import type { BinEntry } from '../bin/bin'
 
-/** A row in a file list: a drive item, an area folder in My Drive, or a bin entry. */
+/** A row in a file list: a drive item, an area folder in Pubky Drive, or a bin entry. */
 export interface ListItem extends DriveItem {
-  /** Set for the Public and Private folders that My Drive lists. */
+  /** Set for the Public and Private folders that Pubky Drive lists. */
   areaRoot?: Area
   /** Set for items in the bin. */
   binEntry?: BinEntry

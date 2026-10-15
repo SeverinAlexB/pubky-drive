@@ -19,7 +19,7 @@ Measurements are for a 1440 × 900 window.
 ## Header
 
 - **Logo and name** "Pubky Drive" at the left, in the sidebar column. Clicking
-  it opens My Drive.
+  it opens Pubky Drive.
 - **Search field** starting above the content card, up to 720px wide, 48px
   high, fully rounded, filled with the surface colour one step darker. A search
   icon sits on the left and a clear button (×) appears on the right when the
@@ -30,11 +30,12 @@ Measurements are for a 1440 × 900 window.
 
 ## Sidebar
 
-- **New** button: 56px high, 16px rounded corners, white with a shadow, a plus
+- **New** button: 56px high, 12px rounded corners, white with a shadow, a plus
   icon and the label "New". It opens the New menu (see 04).
-- Navigation items, each 32px high with a 16px icon and a 14px label. The
-  current view has a fully rounded light blue background and bold label:
-  - My Drive (with Public and Private underneath, indented)
+- Navigation items, each 32px high with a 16px icon and a 14px label and 8px
+  rounded corners. The current view has a pale teal background, a 3px accent
+  bar on its left edge and a bold label:
+  - Pubky Drive (with Public and Private underneath, indented)
   - Recent
   - Starred
   - Bin
@@ -46,16 +47,20 @@ Measurements are for a 1440 × 900 window.
 
 - **Type:** the system UI font stack. Body 14px/20px; page titles 22px;
   dialog titles 22px; small labels 12px.
-- **Colours:** text near-black (`#1f1f1f`), secondary text grey (`#444746`),
-  accent blue (`#0b57d0`), selection and active-navigation light blue
-  (`#c2e7ff`), row hover very light grey (`#f1f3f4`), dividers `#e1e3e1`.
+- **Colours** (tokens in `src/styles/global.css`): neutral grey page
+  background (`#f3f4f6`) with white cards, text near-black (`#1b1d21`),
+  secondary text grey (`#4a4f57`), accent teal (`#0f766e`), selection and
+  active navigation pale teal (`#e8f5f3`) with an accent edge, row hover
+  `#eceef1`, dividers `#e2e4e8`.
 - **Icons:** outlined 20px icons from Lucide. File types get a coloured icon:
-  folder dark grey, image red, PDF red, video red, audio orange, text and code
-  blue, archive grey, other files grey.
+  folder dark grey, image orange, PDF red, video purple, audio amber, text and
+  code blue, archive stone grey, other files slate grey.
+- **Shapes:** cards have 12px corners; buttons, filter chips, the search field,
+  the layout toggle and the selection bar have 8px corners.
 - **Buttons:** filled accent buttons for the main dialog action, text buttons
-  for Cancel, outlined pill buttons for secondary actions, round 40px icon
+  for Cancel, outlined buttons for secondary actions, round 40px icon
   buttons for toolbar actions with a light grey hover circle.
 - **Focus:** a 2px accent outline on every focusable control.
-- **Notifications:** a dark snackbar (`#303030`, white text) docks at the
+- **Notifications:** a dark snackbar (`#2a2d33`, white text) docks at the
   bottom left. It has an optional action (Undo) and a close button, and hides
   after 6 seconds.

@@ -1,11 +1,12 @@
 # Repository instructions
 
-Pubky Drive is a browser file explorer for a Pubky Homeserver, modelled on Google Drive. Read
+Pubky Drive is a browser file explorer for a Pubky Homeserver. Read
 [docs/design.md](docs/design.md) before changing storage behaviour, and the numbered documents in
 [docs/spec/](docs/spec/README.md) before changing the interface.
 
-- Keep the clean-room rule: describe observed behaviour in `docs/`, and don't copy Google code,
-  styles, fonts, icons or other assets.
+- Keep it an original work: don't copy code, styles, colours, fonts, icons, interface texts or
+  other assets from other products, and don't name or compare to other products in the code or
+  docs. The specification in `docs/spec/` is the only reference for behaviour.
 - Keep plain paths inside the app. Convert at the SDK boundary as `docs/design.md` describes in
   "Path encoding"; `src/drive/paths.ts` holds the conversions.
 - Run `npm run check`, `npm test` and `npm run build` before handing off. Run `npm run e2e` when a

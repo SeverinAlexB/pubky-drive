@@ -133,7 +133,7 @@ export function ItemBrowser({
     if (entries.length > 0) setMenu({ anchor, entries, label: 'Item actions' })
   }
 
-  /** Right-clicking empty space opens the New menu for the open folder, as in Drive. */
+  /** Right-clicking empty space opens the New menu for the open folder. */
   const onBackgroundContextMenu = (event: MouseEvent) => {
     if (event.target instanceof Element && event.target.closest('[data-path]')) return
     event.preventDefault()
@@ -193,7 +193,7 @@ export function ItemBrowser({
   /** Runs the shortcut for `event`. Returns whether it was one. See docs/spec/04-menus-and-shortcuts.md. */
   const handleKey = (event: KeyboardEvent) => {
     const command = event.metaKey || event.ctrlKey
-    // On a Mac, Ctrl+C starts the Create shortcuts (Ctrl+C then F), so copying takes ⌘.
+    // ⌘ on a Mac, Ctrl elsewhere.
     const clipboardKey = IS_MAC ? event.metaKey : event.ctrlKey
     const single = selectedItems.length === 1 ? selectedItems[0] : undefined
     const inBin = selectedItems.some((item) => item.binEntry)

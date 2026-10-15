@@ -8,7 +8,7 @@
 
 .move-chip {
   padding: 4px 12px;
-  border: 1px solid #747775;
+  border: 1px solid var(--text-faint);
   border-radius: 8px;
   color: var(--text);
 }
@@ -134,6 +134,6 @@
   margin: 0;
   padding: 8px 12px;
   border-radius: 8px;
-  background: #fef7e0;
-  color: #5c4300;
+  background: #fff4d6;
+  color: #6b4a00;
 }

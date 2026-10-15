@@ -1,23 +1,25 @@
 /* Design tokens and base styles. See docs/spec/01-layout.md. */
 
 :root {
-  --surface: #f6f8fc;
-  --surface-strong: #e9eef6;
+  --surface: #f3f4f6;
+  --surface-strong: #e5e7eb;
   --card: #ffffff;
-  --text: #1f1f1f;
-  --text-muted: #444746;
-  --text-faint: #747775;
-  --accent: #0b57d0;
-  --accent-soft: #c2e7ff;
-  --accent-faint: #e8f0fe;
-  --hover: #f1f3f4;
-  --divider: #e1e3e1;
-  --danger: #b3261e;
-  --success: #146c2e;
-  --snackbar: #303030;
-  --shadow-raised: 0 1px 2px rgb(0 0 0 / 30%), 0 1px 3px 1px rgb(0 0 0 / 15%);
-  --shadow-menu: 0 2px 6px 2px rgb(0 0 0 / 15%), 0 1px 2px rgb(0 0 0 / 30%);
-  --radius-card: 16px;
+  --text: #1b1d21;
+  --text-muted: #4a4f57;
+  --text-faint: #7a808a;
+  --accent: #0f766e;
+  --accent-soft: #c9ebe6;
+  --accent-faint: #e8f5f3;
+  /* Text on --accent-soft. */
+  --on-accent-soft: #0b3b37;
+  --hover: #eceef1;
+  --divider: #e2e4e8;
+  --danger: #c0362c;
+  --success: #1f7a3d;
+  --snackbar: #2a2d33;
+  --shadow-raised: 0 1px 2px rgb(16 24 40 / 10%), 0 2px 6px rgb(16 24 40 / 10%);
+  --shadow-menu: 0 2px 4px rgb(16 24 40 / 8%), 0 8px 24px rgb(16 24 40 / 16%);
+  --radius-card: 12px;
 
   color: var(--text);
   background: var(--surface);
@@ -25,7 +27,6 @@
     system-ui,
     -apple-system,
     'Segoe UI',
-    Roboto,
     'Helvetica Neue',
     Arial,
     sans-serif;
@@ -91,7 +92,7 @@ a {
   height: 40px;
   padding: 0 24px;
   border: 0;
-  border-radius: 20px;
+  border-radius: 8px;
   font-weight: 500;
   white-space: nowrap;
   text-decoration: none;
@@ -103,7 +104,7 @@ a {
 }
 
 .button-filled:hover:not(:disabled) {
-  background: #0842a0;
+  background: #0b5f58;
   box-shadow: var(--shadow-raised);
 }
 
@@ -120,7 +121,7 @@ a {
 .button-outlined {
   background: transparent;
   color: var(--accent);
-  border: 1px solid #747775;
+  border: 1px solid var(--text-faint);
 }
 
 .button-outlined:hover:not(:disabled) {
@@ -150,7 +151,7 @@ a {
 }
 
 .icon-button:hover:not(:disabled) {
-  background: rgb(68 71 70 / 8%);
+  background: var(--hover);
 }
 
 .icon-button:disabled {
@@ -178,7 +179,7 @@ a {
   width: 100%;
   height: 48px;
   padding: 0 14px;
-  border: 1px solid #747775;
+  border: 1px solid var(--text-faint);
   border-radius: 4px;
   background: transparent;
 }

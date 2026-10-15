@@ -20,7 +20,7 @@ test('items without a modification time match no range', () => {
   expect(isModifiedIn(undefined, 'this-year', now)).toBe(false)
 })
 
-test('year ranges name the year, as Drive does', () => {
+test('year ranges name the year', () => {
   expect(modifiedFilters(now).map((filter) => filter.label)).toEqual([
     'Today',
     'Last 7 days',
