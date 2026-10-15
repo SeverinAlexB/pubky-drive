@@ -12,7 +12,13 @@ const RequestMonitor = import.meta.env.DEV
 import { describeError } from '../drive/errors'
 import { SignInPage } from '../features/auth/SignInPage'
 import { PublicViewer } from '../features/sharing/PublicViewer'
-import { replaceSession, restoreSavedSession, saveSession, signOut } from '../pubky/auth'
+import {
+  onSavedSessionChange,
+  replaceSession,
+  restoreSavedSession,
+  saveSession,
+  signOut,
+} from '../pubky/auth'
 import { SnackbarProvider } from '../ui/Snackbar'
 import { DriveApp } from './DriveApp'
 import { useRoute } from './routes'
@@ -40,13 +46,20 @@ export function App() {
 function SessionGate() {
   const [session, setSession] = useState<SessionState>({ state: 'restoring' })
 
-  useEffect(() => {
+  const restore = useCallback(() => {
     restoreSavedSession().then(
       (restored) =>
         setSession(restored ? { state: 'signed-in', session: restored } : { state: 'signed-out' }),
       (error: unknown) => setSession({ state: 'signed-out', error: describeError(error) }),
     )
   }, [])
+
+  useEffect(() => {
+    restore()
+    // Another tab signed in, changed access or signed out: follow it, instead of keeping a
+    // session that may have been revoked.
+    return onSavedSessionChange(restore)
+  }, [restore])
 
   const onSignedIn = useCallback(async (signedIn: Session) => {
     await saveSession(signedIn)

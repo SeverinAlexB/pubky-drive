@@ -17,14 +17,20 @@ export interface PlannedUpload {
 
 /**
  * Maps chosen files to target paths in `folder`. A top-level file or folder whose name is taken
- * gets a numbered name, so uploads never replace existing files.
+ * gets a numbered name, so uploads never replace existing files. `pending` are the targets of
+ * uploads that haven't finished yet: their names count as taken, although the homeserver doesn't
+ * list them yet.
  */
 export async function planUploads(
   drive: DriveStorage,
   folder: StoragePath,
   chosen: readonly ChosenFile[],
+  pending: Iterable<StoragePath> = [],
 ): Promise<PlannedUpload[]> {
   const taken = await drive.childNames(folder)
+  for (const target of pending) {
+    if (target.startsWith(folder)) taken.add(target.slice(folder.length).split('/')[0])
+  }
   const renamedTopLevel = new Map<string, string>()
 
   return chosen.map(({ file, relativePath }) => {

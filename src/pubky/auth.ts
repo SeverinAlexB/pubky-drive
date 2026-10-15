@@ -116,6 +116,18 @@ export async function replaceSession(current: Session, next: Session) {
   if (previousId) await pubky.browserSessionStore.remove(previousId).catch(() => {})
 }
 
+/**
+ * Calls `onChange` when another tab saves a different session (signs in, or changes access) or
+ * forgets it (signs out). Returns a function that stops listening.
+ */
+export function onSavedSessionChange(onChange: () => void) {
+  const listener = (event: StorageEvent) => {
+    if (event.key === SESSION_KEY && event.newValue !== event.oldValue) onChange()
+  }
+  window.addEventListener('storage', listener)
+  return () => window.removeEventListener('storage', listener)
+}
+
 /** Ends the session on the homeserver (in every tab) and forgets it locally. */
 export async function signOut(session: Session) {
   const savedId = localStorage.getItem(SESSION_KEY)

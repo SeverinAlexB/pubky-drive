@@ -85,12 +85,17 @@ export function UploadsProvider({ children }: { children: ReactNode }) {
     }
   }, [drive, markChanged, setStatus])
 
-  const uploadChosen = useCallback(
+  // Batches are planned one at a time, so each sees the names the previous one reserved.
+  const planningQueue = useRef<Promise<void>>(Promise.resolve())
+
+  const planAndQueue = useCallback(
     async (folder: StoragePath, chosen: ChosenFile[]) => {
-      if (chosen.length === 0) return
       let planned: PlannedUpload[]
       try {
-        planned = await planUploads(drive, folder, chosen)
+        const pending = rowsRef.current
+          .filter((row) => row.status === 'queued' || row.status === 'uploading')
+          .map((row) => row.upload.target)
+        planned = await planUploads(drive, folder, chosen, pending)
       } catch (error) {
         notify(describeError(error))
         return
@@ -121,6 +126,16 @@ export function UploadsProvider({ children }: { children: ReactNode }) {
       pump()
     },
     [drive, notify, confirm, updateRows, pump],
+  )
+
+  const uploadChosen = useCallback(
+    (folder: StoragePath, chosen: ChosenFile[]) => {
+      if (chosen.length === 0) return Promise.resolve()
+      const turn = planningQueue.current.then(() => planAndQueue(folder, chosen))
+      planningQueue.current = turn.catch(() => {})
+      return turn
+    },
+    [planAndQueue],
   )
 
   const pick = useCallback(

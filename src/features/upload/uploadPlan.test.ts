@@ -27,6 +27,26 @@ test('numbers taken top-level names and keeps folder structure', async () => {
   ])
 })
 
+test('names of uploads still running count as taken', async () => {
+  const drive = new DriveStorage(new MemoryFileStore(), 'testowner')
+  const file = new File(['x'], 'x')
+
+  const plan = await planUploads(
+    drive,
+    ROOT,
+    [
+      { file, relativePath: 'big.txt' },
+      { file, relativePath: 'photos/a.png' },
+    ],
+    [`${ROOT}big.txt`, `${ROOT}photos/b.png`, '/priv/elsewhere/big.txt'],
+  )
+
+  expect(plan.map((upload) => upload.target)).toEqual([
+    `${ROOT}big (1).txt`,
+    `${ROOT}photos (1)/a.png`,
+  ])
+})
+
 test('rejects names the homeserver would change', async () => {
   const drive = new DriveStorage(new MemoryFileStore(), 'testowner')
   await expect(
