@@ -132,7 +132,6 @@ export function useItemActions() {
           <NameDialog
             title="New folder"
             initialName="Untitled folder"
-            kind="folder"
             confirmLabel="Create"
             onClose={close}
             onConfirm={async (name) => {
@@ -149,7 +148,6 @@ export function useItemActions() {
           <NameDialog
             title="Rename"
             initialName={item.name}
-            kind={item.kind}
             confirmLabel="OK"
             closeWhenUnchanged
             onClose={close}

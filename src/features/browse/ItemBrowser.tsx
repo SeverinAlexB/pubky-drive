@@ -32,11 +32,14 @@ import { fileTypeOf, type DriveItem, type FileType } from '../../drive/items'
 import type { StoragePath } from '../../drive/paths'
 import { Menu, separator, type MenuAnchor, type MenuEntry } from '../../ui/Menu'
 import { useNotifier } from '../../ui/Snackbar'
-import { itemMenuEntries } from '../actions/menus'
+import { itemMenuEntries, newMenuEntries } from '../actions/menus'
 import { useItemActions } from '../actions/useItemActions'
 import { DetailsPane } from '../details/DetailsPane'
 import { Preview } from '../preview/Preview'
+import { useUploads } from '../upload/UploadsProvider'
 import { startItemDrag, useDropTarget } from './dragAndDrop'
+import { FilterChip } from './FilterChip'
+import { isModifiedIn, modifiedFilters, TYPE_FILTERS, type ModifiedRange } from './filters'
 import { GridLayout, ListLayout, type ColumnSet } from './ItemRows'
 import type { ListItem } from './listItem'
 import { useSelection } from './selection'
@@ -62,17 +65,6 @@ interface ItemBrowserProps {
   onGoUp?: () => void
 }
 
-const TYPE_FILTERS: { type: FileType; label: string }[] = [
-  { type: 'folder', label: 'Folders' },
-  { type: 'image', label: 'Images' },
-  { type: 'pdf', label: 'PDFs' },
-  { type: 'text', label: 'Text and code' },
-  { type: 'audio', label: 'Audio' },
-  { type: 'video', label: 'Video' },
-  { type: 'archive', label: 'Archives' },
-  { type: 'other', label: 'Other' },
-]
-
 /** A file list with selection, menus, details and preview. See docs/spec/03-file-list.md. */
 export function ItemBrowser({
   title,
@@ -88,19 +80,25 @@ export function ItemBrowser({
 }: ItemBrowserProps) {
   const { drive, access, starred } = useDrive()
   const actions = useItemActions()
+  const uploads = useUploads()
   const { notify } = useNotifier()
   const { layout, setLayout, detailsOpen, setDetailsOpen } = useViewPreferences()
   const [sort, setSort] = useState<SortOrder>(DEFAULT_SORT)
   const [typeFilter, setTypeFilter] = useState<FileType>()
+  const [modifiedFilter, setModifiedFilter] = useState<ModifiedRange>()
   const [menu, setMenu] = useState<{ anchor: MenuAnchor; entries: MenuEntry[]; label: string }>()
   const [previewPath, setPreviewPath] = useState<StoragePath>()
   const listRef = useRef<HTMLDivElement>(null)
   const { active: dropActive, dropProps } = useDropTarget(folder)
 
   const displayed = useMemo(() => {
-    const filtered = (items ?? []).filter((item) => !typeFilter || fileTypeOf(item) === typeFilter)
+    const filtered = (items ?? []).filter(
+      (item) =>
+        (!typeFilter || fileTypeOf(item) === typeFilter) &&
+        (!modifiedFilter || isModifiedIn(item.modifiedMs, modifiedFilter)),
+    )
     return groupBy ? filtered : sortItems(filtered, sort)
-  }, [items, typeFilter, sort, groupBy])
+  }, [items, typeFilter, modifiedFilter, sort, groupBy])
   const order = useMemo(() => displayed.map((item) => item.path), [displayed])
   const selection = useSelection(order)
   const selectedItems = useMemo(
@@ -131,6 +129,24 @@ export function ItemBrowser({
   const openMenu = (anchor: MenuAnchor, forItems: ListItem[]) => {
     const entries = itemMenuEntries(forItems, menuContext)
     if (entries.length > 0) setMenu({ anchor, entries, label: 'Item actions' })
+  }
+
+  /** Right-clicking empty space opens the New menu for the open folder, as in Drive. */
+  const onBackgroundContextMenu = (event: MouseEvent) => {
+    if (event.target instanceof Element && event.target.closest('[data-path]')) return
+    event.preventDefault()
+    selection.clear()
+    if (!folder) return
+    setMenu({
+      label: 'Folder actions',
+      anchor: { x: event.clientX, y: event.clientY },
+      entries: newMenuEntries({
+        actions,
+        folder,
+        pickFiles: uploads.pickFiles,
+        pickFolder: uploads.pickFolder,
+      }),
+    })
   }
 
   const onRowClick = (item: ListItem, event: MouseEvent) => {
@@ -334,36 +350,18 @@ export function ItemBrowser({
           />
         ) : (
           <div className="filter-bar">
-            <button
-              type="button"
-              className={`filter-chip ${typeFilter ? 'active' : ''}`}
-              onClick={(event) =>
-                setMenu({
-                  label: 'Type',
-                  anchor: { element: event.currentTarget },
-                  entries: TYPE_FILTERS.map(({ type, label }) => ({
-                    type: 'item' as const,
-                    label,
-                    icon: typeFilter === type ? Check : undefined,
-                    onSelect: () => setTypeFilter(type),
-                  })),
-                })
-              }
-            >
-              {typeFilter
-                ? TYPE_FILTERS.find((filter) => filter.type === typeFilter)?.label
-                : 'Type'}
-            </button>
-            {typeFilter && (
-              <button
-                type="button"
-                className="icon-button small"
-                aria-label="Clear type filter"
-                onClick={() => setTypeFilter(undefined)}
-              >
-                <X size={18} />
-              </button>
-            )}
+            <FilterChip
+              label="Type"
+              options={TYPE_FILTERS}
+              value={typeFilter}
+              onChange={setTypeFilter}
+            />
+            <FilterChip
+              label="Modified"
+              options={modifiedFilters()}
+              value={modifiedFilter}
+              onChange={setModifiedFilter}
+            />
           </div>
         )}
 
@@ -375,9 +373,7 @@ export function ItemBrowser({
           tabIndex={-1}
           onKeyDown={onKeyDown}
           onClick={() => selection.clear()}
-          onContextMenu={(event) => {
-            if (event.target === event.currentTarget) event.preventDefault()
-          }}
+          onContextMenu={onBackgroundContextMenu}
           {...dropProps}
         >
           {error ? (
@@ -397,7 +393,7 @@ export function ItemBrowser({
             </div>
           ) : displayed.length === 0 ? (
             <div className="browser-state">
-              {typeFilter ? <p>No items of this type</p> : emptyState}
+              {typeFilter || modifiedFilter ? <p>No items match these filters</p> : emptyState}
             </div>
           ) : layout === 'grid' && !groupBy ? (
             <GridLayout items={displayed} {...rowProps} />

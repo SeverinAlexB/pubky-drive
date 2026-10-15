@@ -11,13 +11,13 @@ test.beforeEach(async ({ page }) => {
   await createFolder(page, 'Archive')
 })
 
-test('rename keeps the extension selected out and can be undone', async ({ page }) => {
+test('rename selects the whole name, as Drive does, and can be undone', async ({ page }) => {
   await contextMenu(page, 'report.txt', 'Rename')
   const field = page.getByRole('textbox', { name: 'Name' })
   await expect(field).toHaveValue('report.txt')
   expect(
     await field.evaluate((input: HTMLInputElement) => [input.selectionStart, input.selectionEnd]),
-  ).toEqual([0, 6])
+  ).toEqual([0, 10])
 
   await field.fill('summary.txt')
   await page.getByRole('button', { name: 'OK' }).click()

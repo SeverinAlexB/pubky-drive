@@ -14,9 +14,8 @@ and Esc cancels.
 
 ## Rename
 
-- Dialog "Rename" with the current name. For files, the name without the
-  extension is selected; for folders, the whole name. Buttons **Cancel** and
-  **OK**.
+- Dialog "Rename" with the current name, fully selected (extension included,
+  as in Drive). Buttons **Cancel** and **OK**.
 - Snackbar: "‘old’ renamed to ‘new’" with **Undo**.
 - Renaming a folder moves every file inside it, with progress in the snackbar
   ("Renaming 12 files…").

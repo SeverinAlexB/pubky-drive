@@ -55,11 +55,13 @@ Values under 10 of a unit have one decimal place.
 
 ## Filter bar
 
-- **P1:** a **Type** chip: Folders, Images, PDFs, Text and code, Audio, Video,
+- A **Type** chip: Folders, Images, PDFs, Text and code, Audio, Video,
   Archives, Other. Choosing a type filters the current list and shows the chip
   as active with a clear (×) button.
-- **P2:** a **Modified** chip: Today, Last 7 days, Last 30 days, This year,
-  Last year.
+- A **Modified** chip: Today, Last 7 days, Last 30 days, This year (2026), Last
+  year (2025). Folders have no modification time on a homeserver, so they
+  don't match any period.
+- Both chips combine. When nothing matches: "No items match these filters".
 
 ## Selection
 

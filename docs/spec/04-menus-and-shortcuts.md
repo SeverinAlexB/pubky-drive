@@ -56,6 +56,13 @@ Opened from the last breadcrumb segment: New folder, ---, File upload, Folder
 upload, ---, Rename, Share, Organise, File information, ---, Move to bin. The
 area roots (Public, Private) only offer the New items.
 
+## Empty-space menu
+
+Right-clicking empty space in a folder's list clears the selection and opens
+the New items only: New folder, ---, File upload, Folder upload. In views
+without a folder (Recent, Starred, search, Bin) and in read-only folders,
+nothing opens.
+
 ## Selection bar
 
 Replaces the filter bar while items are selected. It is 40px high with a light

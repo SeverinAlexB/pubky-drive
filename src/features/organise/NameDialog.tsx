@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { describeError } from '../../drive/errors'
-import { nameProblem, splitExtension } from '../../drive/names'
+import { nameProblem } from '../../drive/names'
 import { Dialog } from '../../ui/Dialog'
 
 interface NameDialogProps {
   title: string
   initialName: string
-  kind: 'file' | 'folder'
   confirmLabel: string
   /** Closes without calling `onConfirm` when the name wasn't changed, as renaming does. */
   closeWhenUnchanged?: boolean
@@ -19,7 +18,6 @@ interface NameDialogProps {
 export function NameDialog({
   title,
   initialName,
-  kind,
   confirmLabel,
   closeWhenUnchanged = false,
   onConfirm,
@@ -32,12 +30,12 @@ export function NameDialog({
   const problem = nameProblem(name)
 
   useEffect(() => {
-    // Select the name without its extension, so typing keeps the file type.
+    // The whole name is selected, extension included, as in Drive.
     const field = input.current
     if (!field) return
     field.focus()
-    field.setSelectionRange(0, splitExtension(initialName, kind).base.length)
-  }, [initialName, kind])
+    field.select()
+  }, [])
 
   const submit = async () => {
     if (problem || busy) return

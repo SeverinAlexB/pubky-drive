@@ -163,3 +163,42 @@ test('deep folders collapse the middle of the breadcrumb', async ({ page }) => {
   await expect(breadcrumb(page).getByRole('button', { name: '…' }).first()).toBeVisible()
   await expect(breadcrumb(page).getByRole('heading')).toHaveText('four')
 })
+
+test('right-clicking empty space opens the New menu for the folder', async ({ page }) => {
+  await signUp(page)
+  await openArea(page, 'Private')
+  await uploadFiles(page, [{ name: 'a.txt', text: 'a' }])
+  await row(page, 'a.txt').click()
+
+  const list = page.locator('.browser-list')
+  const box = (await list.boundingBox())!
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height - 40, { button: 'right' })
+
+  const menu = page.getByRole('menu', { name: 'Folder actions' })
+  for (const label of ['New folder', 'File upload', 'Folder upload']) {
+    await expect(menu.getByRole('menuitem', { name: label, exact: true })).toBeVisible()
+  }
+  await expect(menu.getByRole('menuitem')).toHaveCount(3)
+  await expect(page.getByRole('toolbar', { name: 'Selection actions' })).toHaveCount(0)
+  await menu.getByRole('menuitem', { name: 'New folder' }).click()
+  await expect(page.getByRole('dialog', { name: 'New folder' })).toBeVisible()
+})
+
+test('the Modified filter keeps only items changed in the chosen period', async ({ page }) => {
+  await signUp(page)
+  await openArea(page, 'Private')
+  await createFolder(page, 'Folder')
+  await uploadFiles(page, [{ name: 'today.txt', text: 't' }])
+
+  await page.getByRole('button', { name: 'Modified', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Last year (2025)' }).click()
+  await expect(page.getByText('No items match these filters')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Last year (2025)' }).click()
+  await page.getByRole('menuitem', { name: 'Today' }).click()
+  await expect(row(page, 'today.txt')).toBeVisible()
+  await expect(row(page, 'Folder')).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Clear modified filter' }).click()
+  await expect(row(page, 'Folder')).toBeVisible()
+})
