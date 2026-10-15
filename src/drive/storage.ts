@@ -29,6 +29,14 @@ const STATS_CONCURRENCY = 8
  * The signed-in user's files, seen as folders and items. Listings hide folder markers and the
  * app's own data folders.
  */
+export interface ListOptions {
+  /**
+   * List everything stored, including folder markers and the app's hidden folders, as the
+   * Homeserver section does.
+   */
+  everything?: boolean
+}
+
 export class DriveStorage {
   readonly files: FileStore
   private readonly ownerZ32: string
@@ -41,18 +49,21 @@ export class DriveStorage {
   }
 
   /** The folders and files directly inside `folder`, with file metadata. Missing folders are empty. */
-  async listFolder(folder: StoragePath): Promise<DriveItem[]> {
-    return (await this.listFolderIfExists(folder)) ?? []
+  async listFolder(folder: StoragePath, options?: ListOptions): Promise<DriveItem[]> {
+    return (await this.listFolderIfExists(folder, options)) ?? []
   }
 
   /**
    * Like `listFolder`, but `undefined` when the folder doesn't exist on the homeserver, such as
    * after it was moved or deleted elsewhere. Folders exist only while they contain a file.
    */
-  async listFolderIfExists(folder: StoragePath): Promise<DriveItem[] | undefined> {
+  async listFolderIfExists(
+    folder: StoragePath,
+    options: ListOptions = {},
+  ): Promise<DriveItem[] | undefined> {
     const listed = await this.listPaths(folder, { shallow: true })
     if (!listed) return undefined
-    const paths = listed.filter((path) => this.isVisible(path))
+    const paths = options.everything ? listed : listed.filter((path) => this.isVisible(path))
     return mapWithConcurrency(paths, STATS_CONCURRENCY, (path) => this.describe(path))
   }
 

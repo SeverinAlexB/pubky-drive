@@ -7,13 +7,19 @@ import { useLiveChanges } from '../../app/useLiveChanges'
 import { useLoad } from '../../app/useLoad'
 import { useViewPreferences } from '../../app/viewPreferences'
 import { APP_ID } from '../../config'
-import { canWrite, DRIVE_ROOTS, HOMESERVER_ROOTS } from '../../drive/access'
+import { APP_DATA_ROOT, canWrite, DRIVE_ROOTS, HOMESERVER_ROOTS } from '../../drive/access'
 import { itemFromPath } from '../../drive/items'
-import { parentOf, type Area, type StoragePath } from '../../drive/paths'
+import { isWithin, nameOf, parentOf, type Area, type StoragePath } from '../../drive/paths'
+import { FOLDER_MARKER } from '../../drive/names'
+import { BIN_ROOT } from '../bin/bin'
 import { Menu, separator, type MenuEntry } from '../../ui/Menu'
 import { itemMenuEntries, newMenuEntries } from '../actions/menus'
 import { useItemActions } from '../actions/useItemActions'
-import { HomeserverBanner, HomeserverLocked } from '../homeserver/HomeserverNotices'
+import {
+  AppFolderBanner,
+  HomeserverBanner,
+  HomeserverLocked,
+} from '../homeserver/HomeserverNotices'
 import { useUploads } from '../upload/UploadsProvider'
 import { useDropTarget } from './dragAndDrop'
 import { ItemBrowser } from './ItemBrowser'
@@ -38,11 +44,15 @@ export function FolderView({ scope, area, folder }: FolderViewProps) {
 
   const load = useCallback(async (): Promise<ListItem[] | 'missing'> => {
     if (!path) return []
+    // The Homeserver section shows everything stored, including what My Drive hides.
+    const options = { everything: scope === 'homeserver' }
     // An area root is simply empty until it has files; any other folder can disappear.
     const items =
-      path === root ? await drive.listFolder(path) : await drive.listFolderIfExists(path)
+      path === root
+        ? await drive.listFolder(path, options)
+        : await drive.listFolderIfExists(path, options)
     if (!items) return 'missing'
-    return scope === 'homeserver' ? items.map(withHomeserverBadge) : items
+    return scope === 'homeserver' ? items.map(asHomeserverItem) : items
   }, [drive, path, root, scope])
   // Reload after changes made here (`version`) and elsewhere (`liveChanges`).
   const liveChanges = useLiveChanges(path ? [path] : [])
@@ -61,7 +71,7 @@ export function FolderView({ scope, area, folder }: FolderViewProps) {
   }
 
   const sectionRoute: Route = scope === 'drive' ? { view: 'my-drive' } : { view: 'homeserver' }
-  const goUp = () => navigate(path === root ? sectionRoute : folderRoute(parentOf(path)))
+  const goUp = () => navigate(path === root ? sectionRoute : folderRoute(parentOf(path), scope))
   const writable = canWrite(access, path)
 
   if (data === 'missing') {
@@ -70,7 +80,7 @@ export function FolderView({ scope, area, folder }: FolderViewProps) {
         <h2>This folder no longer exists</h2>
         <p>It may have been moved, renamed or deleted, here or in another app.</p>
         <button type="button" className="button button-outlined" onClick={goUp}>
-          Open {folderLabel(parentOf(path))}
+          Open {folderLabel(parentOf(path), scope)}
         </button>
       </div>
     )
@@ -86,7 +96,14 @@ export function FolderView({ scope, area, folder }: FolderViewProps) {
       columns="owner"
       folder={writable ? path : undefined}
       onGoUp={goUp}
-      banner={scope === 'homeserver' ? <HomeserverBanner /> : undefined}
+      banner={
+        scope === 'homeserver' ? (
+          <>
+            <HomeserverBanner />
+            {isWithinAppFolder(path) && <AppFolderBanner />}
+          </>
+        ) : undefined
+      }
       emptyState={
         writable ? (
           <>
@@ -101,15 +118,41 @@ export function FolderView({ scope, area, folder }: FolderViewProps) {
   )
 }
 
-/** Marks the folders that belong to Pubky Drive, so they're recognisable among other apps' data. */
-function withHomeserverBadge(item: ListItem): ListItem {
-  if (item.path === `/pub/${APP_ID}/` || item.path === `/priv/${APP_ID}/`) {
-    return { ...item, badge: 'Pubky Drive' }
-  }
+const APP_FOLDERS: StoragePath[] = [`/pub/${APP_ID}/`, `/priv/${APP_ID}/`]
+const APP_SETTINGS_ROOT: StoragePath = `${APP_DATA_ROOT}app/`
+
+function isWithinAppFolder(path: StoragePath) {
+  return APP_FOLDERS.some((folder) => isWithin(path, folder))
+}
+
+/**
+ * An item as the Homeserver section shows it: its folders open in this section, and Pubky
+ * Drive's own folders and folder markers say what they are.
+ */
+function asHomeserverItem(item: ListItem): ListItem {
+  const shown: ListItem = { ...item, scope: 'homeserver' }
+  if (APP_FOLDERS.includes(item.path)) return { ...shown, badge: 'Pubky Drive' }
   if (item.path === DRIVE_ROOTS.public || item.path === DRIVE_ROOTS.private) {
-    return { ...item, badge: 'Opens in My Drive' }
+    return { ...shown, badge: 'My Drive files' }
   }
-  return item
+  if (item.path === BIN_ROOT) {
+    return {
+      ...shown,
+      badge: 'Bin',
+      note: 'Pubky Drive’s bin: each entry holds a binned item and a record of where it was.',
+    }
+  }
+  if (item.path === APP_SETTINGS_ROOT) {
+    return { ...shown, badge: 'App data', note: 'Pubky Drive’s settings, such as starred items.' }
+  }
+  if (nameOf(item.path) === FOLDER_MARKER) {
+    return {
+      ...shown,
+      badge: 'Folder marker',
+      note: 'Keeps this folder when it has no other files. Deleting it removes an empty folder.',
+    }
+  }
+  return shown
 }
 
 interface BreadcrumbsProps {
@@ -175,7 +218,7 @@ function Breadcrumbs({ scope, area, root, path, writable }: BreadcrumbsProps) {
             label={crumb.label}
             folder={crumb.folder}
             collapsed={crumbs.length > 4 && index > 0 && index < crumbs.length - 3}
-            onOpen={() => navigate(crumb.folder ? folderRoute(crumb.folder) : sectionRoute)}
+            onOpen={() => navigate(crumb.folder ? folderRoute(crumb.folder, scope) : sectionRoute)}
           />
           <ChevronRight size={20} className="breadcrumb-separator" aria-hidden />
         </span>

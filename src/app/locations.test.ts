@@ -26,3 +26,15 @@ test('area roots of both sections are recognised', () => {
   expect(isAreaRoot('/pub/pubky-drive/files/')).toBe(true)
   expect(isAreaRoot('/pub/pubky-drive/')).toBe(false)
 })
+
+test('the Homeserver section shows Drive folders as ordinary folders', () => {
+  const photos = '/priv/pubky-drive/files/photos/'
+  expect(folderRoute(photos, 'homeserver')).toEqual({
+    view: 'folder',
+    scope: 'homeserver',
+    area: 'private',
+    folder: 'pubky-drive/files/photos',
+  })
+  expect(folderLabel(photos, 'homeserver')).toBe('/priv › pubky-drive › files › photos')
+  expect(folderLabel(photos)).toBe('Private › photos')
+})

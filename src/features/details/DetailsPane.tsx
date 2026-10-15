@@ -91,6 +91,7 @@ function ItemDetails({
 
       <section>
         <h3>{item.kind === 'folder' ? 'Folder details' : 'File details'}</h3>
+        {item.note && <p className="details-note">{item.note}</p>}
         <dl className="details-list">
           <dt>Type</dt>
           <dd>{FILE_TYPE_LABELS[fileTypeOf(item)]}</dd>
@@ -110,9 +111,9 @@ function ItemDetails({
                   <button
                     type="button"
                     className="details-link"
-                    onClick={() => navigate(folderRoute(parentOf(item.path)))}
+                    onClick={() => navigate(folderRoute(parentOf(item.path), item.scope))}
                   >
-                    {folderLabel(parentOf(item.path))}
+                    {folderLabel(parentOf(item.path), item.scope)}
                   </button>
                 )}
               </dd>

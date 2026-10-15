@@ -116,7 +116,7 @@ export function ItemBrowser({
 
   const open = (item: ListItem) => {
     if (item.binEntry) notify('To open this item, restore it from the bin first.')
-    else if (item.kind === 'folder') navigate(folderRoute(item.path))
+    else if (item.kind === 'folder') navigate(folderRoute(item.path, item.scope))
     else setPreviewPath(item.path)
   }
 

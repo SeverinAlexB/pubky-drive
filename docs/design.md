@@ -116,16 +116,20 @@ folder, `/priv/pubky-drive/`:
 | `/priv/pubky-drive/bin/<entry-id>/entry.json` | A binned item's original path, kind and binning time |
 | `/priv/pubky-drive/bin/<entry-id>/content/…`  | The binned item's files                              |
 
-Listings in the Homeserver section hide `/priv/pubky-drive/app/` and
-`/priv/pubky-drive/bin/`, so that the bin doesn't appear twice. Starred items
+My Drive never lists `app/` or `bin/`, because they're outside the Drive
+folders. The Homeserver section lists them like any other folder, with "App
+data" and "Bin" badges and a second banner inside `/pub/pubky-drive/` and
+`/priv/pubky-drive/`: changing them by hand can break the bin and starred
+items. Pubky Drive skips bin entries whose record it can't read. Starred items
 can be anywhere, including the Homeserver section; Restore only writes inside
 the areas the session can access.
 
 ## Folders
 
 Directories exist only while they contain a file. To keep an empty folder,
-the app writes a zero-byte marker file named `.keep` into it. Listings hide
-`.keep` files. When a folder gets its first real file, the marker stays; it is
+the app writes a zero-byte marker file named `.keep` into it. My Drive, Recent
+and search hide `.keep` files; the Homeserver section shows them with a "Folder
+marker" badge, because it shows exactly what is stored. When a folder gets its first real file, the marker stays; it is
 removed together with the folder.
 
 A folder's modified time is not available from the Homeserver, so folder rows

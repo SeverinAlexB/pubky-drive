@@ -67,9 +67,20 @@ other apps' data. See docs/design.md, "Two sections" and "Access levels".
   banner: "You're browsing all files on your homeserver. Files outside Pubky
   Drive belong to other apps; changing them can break those apps." With View
   access it adds "View only" and an **Allow changes** button.
-- The app's own folders (`/pub/pubky-drive/`, `/priv/pubky-drive/`) carry a
-  "Pubky Drive" badge; the Drive folders inside them carry "Opens in My Drive"
-  and open there.
+- Listings show exactly what is stored, including what My Drive hides: folder
+  markers (`.keep`), and Pubky Drive's `app/` and `bin/` folders. Everything
+  can be changed by hand with Manage access.
+- Badges explain Pubky Drive's own items: "Pubky Drive" on `/pub/pubky-drive/`
+  and `/priv/pubky-drive/`, "My Drive files" on their `files/` folders, "Bin"
+  and "App data" on `bin/` and `app/`, and "Folder marker" on `.keep`. The
+  details pane says what the bin, the app data and a folder marker are for
+  ("Keeps this folder when it has no other files. Deleting it removes an
+  empty folder.").
+- Inside `/pub/pubky-drive/` and `/priv/pubky-drive/` a second banner says:
+  "Pubky Drive manages this folder. Changing `bin/` or `app/` can break the bin
+  and starred items; changing `files/` here is the same as in My Drive."
+- Navigation stays in the Homeserver section: opening `files/`, the
+  breadcrumb, ⌥↑ and the details pane's location never switch to My Drive.
 - With View access, items outside Pubky Drive can be opened, previewed,
   downloaded and starred, but menu items that change them are disabled, and
   they can't be dragged or dropped onto. New and uploads go to the private

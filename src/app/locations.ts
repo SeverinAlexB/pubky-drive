@@ -29,31 +29,39 @@ export interface Location {
   segments: string[]
 }
 
-/** Where `path` is. Paths inside the Drive folders belong to My Drive, everything else to the homeserver. */
-export function locate(path: StoragePath): Location {
+/**
+ * Where `path` is. Without `scope`, where its data belongs: paths inside the Drive folders belong to
+ * My Drive, everything else to the homeserver. With a `scope`, where that section shows it: the
+ * Homeserver section also shows the Drive folders, as ordinary folders.
+ */
+export function locate(path: StoragePath, scope?: Scope): Location {
+  const sections: Scope[] = scope ? [scope] : ['drive', 'homeserver']
   for (const area of ['public', 'private'] as const) {
-    for (const [scope, root] of [
-      ['drive', DRIVE_ROOTS[area]],
-      ['homeserver', HOMESERVER_ROOTS[area]],
-    ] as const) {
+    for (const section of sections) {
+      const root = section === 'drive' ? DRIVE_ROOTS[area] : HOMESERVER_ROOTS[area]
       if (!isWithin(path, root)) continue
       const inside = path.slice(root.length).replace(/\/$/, '')
-      return { scope, area, root, segments: inside ? inside.split('/') : [] }
+      return { scope: section, area, root, segments: inside ? inside.split('/') : [] }
     }
   }
-  throw new Error(`${path} isn't a storage path.`)
+  throw new Error(`${path} isn't a storage path${scope ? ` in the ${scope} section` : ''}.`)
 }
 
-/** The route that opens `folder`. */
-export function folderRoute(folder: StoragePath): Route {
-  const { scope, area, segments } = locate(folder)
-  return { view: 'folder', scope, area, folder: segments.join('/') }
+/** The route that opens `folder`, in `scope` or else the section its data belongs to. */
+export function folderRoute(folder: StoragePath, scope?: Scope): Route {
+  const location = locate(folder, scope)
+  return {
+    view: 'folder',
+    scope: location.scope,
+    area: location.area,
+    folder: location.segments.join('/'),
+  }
 }
 
 /** `Public › photos` for a Drive folder, `/pub › pubky.app` for a homeserver folder. */
-export function folderLabel(folder: StoragePath) {
-  const { scope, area, segments } = locate(folder)
-  return [areaLabel(scope, area), ...segments].join(' › ')
+export function folderLabel(folder: StoragePath, scope?: Scope) {
+  const location = locate(folder, scope)
+  return [areaLabel(location.scope, location.area), ...location.segments].join(' › ')
 }
 
 /**

@@ -73,6 +73,11 @@
   color: var(--text-muted);
 }
 
+.details-note {
+  margin: 0 0 12px;
+  color: var(--text-muted);
+}
+
 .details-list {
   display: grid;
   gap: 2px;

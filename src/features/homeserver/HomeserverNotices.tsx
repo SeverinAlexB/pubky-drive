@@ -33,6 +33,19 @@ export function HomeserverBanner() {
   )
 }
 
+/** The second warning inside Pubky Drive's own folders, where the bin and settings are. */
+export function AppFolderBanner() {
+  return (
+    <div className="homeserver-banner" role="note">
+      <TriangleAlert size={20} aria-hidden />
+      <p>
+        Pubky Drive manages this folder. Changing <code>bin/</code> or <code>app/</code> can break
+        the bin and starred items; changing <code>files/</code> here is the same as in My Drive.
+      </p>
+    </div>
+  )
+}
+
 /** Shown in the Homeserver section until the session has homeserver access. */
 export function HomeserverLocked() {
   const openAccessDialog = useAccessDialog()
