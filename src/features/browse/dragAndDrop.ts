@@ -1,6 +1,8 @@
 // Dragging items onto folders, and dropping files from the computer. See docs/spec/06-organise.md.
 
 import { useState, type DragEvent } from 'react'
+import { useDrive } from '../../app/DriveContext'
+import { canWrite } from '../../drive/access'
 import { itemFromPath } from '../../drive/items'
 import type { StoragePath } from '../../drive/paths'
 import { useItemActions } from '../actions/useItemActions'
@@ -30,8 +32,10 @@ export function useDropTarget(target: StoragePath | undefined) {
   const [active, setActive] = useState(false)
   const actions = useItemActions()
   const uploads = useUploads()
+  const { access } = useDrive()
 
-  if (!target) return { active: false, dropProps: {} }
+  // Only folders this session may write accept drops.
+  if (!target || !canWrite(access, target)) return { active: false, dropProps: {} }
 
   const accepts = (event: DragEvent) =>
     event.dataTransfer.types.includes(ITEMS_TYPE) || event.dataTransfer.types.includes('Files')

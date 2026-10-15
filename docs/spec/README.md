@@ -22,4 +22,4 @@ Priorities:
 | [08 Preview and details](08-preview-and-details.md) | File preview and the details pane                        |
 | [09 Sharing](09-sharing.md)                         | Public and private, links and the public viewer          |
 | [10 Search](10-search.md)                           | Search field, suggestions and results                    |
-| [11 Sign-in](11-sign-in.md)                         | Pubky Ring sign-in and access modes                      |
+| [11 Sign-in](11-sign-in.md)                         | Pubky Ring sign-in and access levels                     |

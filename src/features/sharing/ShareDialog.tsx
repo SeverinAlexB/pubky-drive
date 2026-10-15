@@ -1,6 +1,8 @@
 import { Copy, Globe, Link, Lock } from 'lucide-react'
 import { useState } from 'react'
 import { useDrive } from '../../app/DriveContext'
+import { matchingFolderInOtherArea } from '../../app/locations'
+import { canWrite } from '../../drive/access'
 import { describeError } from '../../drive/errors'
 import type { DriveItem } from '../../drive/items'
 import type { Area } from '../../drive/paths'
@@ -25,8 +27,8 @@ export function ShareDialog({ item, onChangeArea, onCopied, onClose }: ShareDial
   const [error, setError] = useState<string>()
   const [busy, setBusy] = useState(false)
   const isPublic = item.area === 'public'
-  const otherArea: Area = isPublic ? 'private' : 'public'
-  const canChange = Boolean(access.roots[otherArea])
+  const canChange =
+    canWrite(access, item.path) && canWrite(access, matchingFolderInOtherArea(item.path))
 
   const changeArea = async (area: Area) => {
     if (area === item.area || busy) return

@@ -26,7 +26,7 @@ Measurements are for a 1440 × 900 window.
   field has text. See 10.
 - **Account button** at the right: a round 32px avatar generated from the
   public key. It opens a menu with the shortened public key (copyable), the
-  access mode, and **Sign out**.
+  current access level, **Change access…** (see 11), and **Sign out**.
 
 ## Sidebar
 
@@ -38,8 +38,9 @@ Measurements are for a 1440 × 900 window.
   - Recent
   - Starred
   - Bin
-- **Access summary** at the bottom: "Drive folder" or "Entire homeserver",
-  and a short line on what that means.
+- A divider, then **Homeserver** (server icon) with a grey hint at the right:
+  "No access" or "View only". With access, `/pub` and `/priv` appear
+  underneath, indented.
 
 ## Visual language
 

@@ -2,17 +2,11 @@ import { ArrowLeft, ChevronRight, LoaderCircle } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { useDrive } from '../../app/DriveContext'
 import { useLoad } from '../../app/useLoad'
-import { AREA_LABELS, folderLabel, isAreaRoot } from '../../app/locations'
+import { AREA_LABELS, folderLabel, HOMESERVER_AREA_LABELS, isAreaRoot } from '../../app/locations'
+import { canWrite, HOMESERVER_ROOTS, type DriveAccess } from '../../drive/access'
 import { describeError } from '../../drive/errors'
 import type { DriveItem } from '../../drive/items'
-import {
-  areaOfPath,
-  isWithin,
-  nameOf,
-  parentOf,
-  type Area,
-  type StoragePath,
-} from '../../drive/paths'
+import { areaOfPath, isWithin, nameOf, parentOf, type StoragePath } from '../../drive/paths'
 import { Dialog } from '../../ui/Dialog'
 import { FileIcon } from '../../ui/FileIcon'
 import './MoveDialog.css'
@@ -31,16 +25,16 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
   const { drive, access } = useDrive()
   const currentFolder = parentOf(items[0].path)
   const [browsed, setBrowsed] = useState<Browsed>(
-    isAreaRoot(currentFolder, access) ? undefined : parentOf(currentFolder),
+    isAreaRoot(currentFolder) ? undefined : parentOf(currentFolder),
   )
   const [selected, setSelected] = useState<StoragePath>()
   const [moveError, setMoveError] = useState<string>()
   const [busy, setBusy] = useState(false)
 
   const loadFolders = useCallback(async () => {
-    if (browsed === undefined) return areaItems(access.roots)
+    if (browsed === undefined) return topLevelFolders(access)
     return (await drive.listFolder(browsed)).filter((item) => item.kind === 'folder')
-  }, [browsed, drive, access.roots])
+  }, [browsed, drive, access])
   const { data: folders, error: listError } = useLoad(loadFolders)
   const error = moveError ?? listError
 
@@ -50,7 +44,7 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
   }
 
   const target = selected ?? browsed
-  const problem = target && moveProblem(items, target)
+  const problem = target && moveProblem(items, target, access)
   const crossesAreas = target && items.some((item) => areaOfPath(item.path) !== areaOfPath(target))
 
   const submit = async () => {
@@ -67,7 +61,7 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
 
   const goUp = () => {
     if (browsed === undefined) return
-    browse(isAreaRoot(browsed, access) ? undefined : parentOf(browsed))
+    browse(isAreaRoot(browsed) ? undefined : parentOf(browsed))
   }
 
   return (
@@ -92,7 +86,7 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
       }
     >
       <p className="move-current">
-        Current location: <span className="move-chip">{folderLabel(currentFolder, access)}</span>
+        Current location: <span className="move-chip">{folderLabel(currentFolder)}</span>
       </p>
       <div className="move-browser">
         <div className="move-browser-header">
@@ -108,8 +102,8 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
           <strong>
             {browsed === undefined
               ? 'My Drive'
-              : isAreaRoot(browsed, access)
-                ? folderLabel(browsed, access)
+              : isAreaRoot(browsed)
+                ? folderLabel(browsed)
                 : nameOf(browsed)}
           </strong>
         </div>
@@ -122,8 +116,8 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
           {folders?.length === 0 && <li className="move-placeholder">No folders</li>}
           {folders?.map((folder) => {
             // A folder that can't be the target can still be opened to move into a subfolder.
-            const unselectable = Boolean(moveProblem(items, folder.path))
-            const area = isAreaRoot(folder.path, access) ? areaOfPath(folder.path) : undefined
+            const unselectable = Boolean(moveProblem(items, folder.path, access))
+            const area = isAreaRoot(folder.path) ? areaOfPath(folder.path) : undefined
             return (
               <li
                 key={folder.path}
@@ -159,7 +153,7 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
         </ul>
       </div>
       <p className="move-target">
-        {target ? <>Move to: {folderLabel(target, access)}</> : 'Select a folder'}
+        {target ? <>Move to: {folderLabel(target)}</> : 'Select a folder'}
       </p>
       {problem && <p className="field-error">{problem}</p>}
       {!problem && crossesAreas && (
@@ -175,7 +169,8 @@ export function MoveDialog({ items, onMove, onClose }: MoveDialogProps) {
 }
 
 /** Why the items can't move into `target`, or `undefined` when they can. */
-function moveProblem(items: DriveItem[], target: StoragePath) {
+function moveProblem(items: DriveItem[], target: StoragePath, access: DriveAccess) {
+  if (!canWrite(access, target)) return 'This folder is read only.'
   if (items.some((item) => item.kind === 'folder' && isWithin(target, item.path))) {
     return 'A folder can’t be moved into itself.'
   }
@@ -183,9 +178,24 @@ function moveProblem(items: DriveItem[], target: StoragePath) {
   return undefined
 }
 
-function areaItems(roots: Partial<Record<Area, StoragePath>>): DriveItem[] {
-  return (['public', 'private'] as const).flatMap((area) => {
-    const root = roots[area]
+/** The top level: the Drive areas, then the homeserver roots when the session may change them. */
+function topLevelFolders(access: DriveAccess): DriveItem[] {
+  const areas = ['public', 'private'] as const
+  const drive = areas.flatMap((area) => {
+    const root = access.roots[area]
     return root ? [{ kind: 'folder' as const, path: root, name: AREA_LABELS[area], area }] : []
   })
+  const homeserver = areas.flatMap((area) =>
+    access.homeserver[area] === 'manage'
+      ? [
+          {
+            kind: 'folder' as const,
+            path: HOMESERVER_ROOTS[area],
+            name: HOMESERVER_AREA_LABELS[area],
+            area,
+          },
+        ]
+      : [],
+  )
+  return [...drive, ...homeserver]
 }

@@ -14,6 +14,7 @@ import {
 import { useDrive } from '../../app/DriveContext'
 import { folderLabel, folderRoute } from '../../app/locations'
 import { navigate } from '../../app/routes'
+import { canWrite, type DriveAccess } from '../../drive/access'
 import { fileTypeOf, type DriveItem } from '../../drive/items'
 import { parentOf, type StoragePath } from '../../drive/paths'
 import { FileIcon } from '../../ui/FileIcon'
@@ -140,7 +141,7 @@ function ListRow({
       aria-selected={isSelected}
       data-path={item.path}
       tabIndex={focused === item.path ? 0 : -1}
-      draggable={!item.areaRoot && !binned}
+      draggable={isMovable(item, access)}
       onClick={(event) => handlers.onClick(item, event)}
       onDoubleClick={() => handlers.onOpen(item)}
       onContextMenu={(event) => handlers.onContextMenu(item, event)}
@@ -150,6 +151,7 @@ function ListRow({
       <span role="gridcell" className="file-name">
         <FileIcon item={item} areaRoot={item.areaRoot} />
         <span className="file-name-text">{item.name}</span>
+        {item.badge && <span className="file-badge">{item.badge}</span>}
         {starred.has(item.path) && (
           <Star size={14} className="file-star" fill="currentColor" aria-label="Starred" />
         )}
@@ -158,17 +160,17 @@ function ListRow({
       {columns !== 'owner' && (
         <span role="gridcell" className="file-location">
           {binned ? (
-            folderLabel(parentOf(binned.originalPath), access)
+            folderLabel(parentOf(binned.originalPath))
           ) : item.location ? (
             <button
               type="button"
               className="file-location-link"
               onClick={(event) => {
                 event.stopPropagation()
-                navigate(folderRoute(item.location!, access))
+                navigate(folderRoute(item.location!))
               }}
             >
-              {folderLabel(item.location, access)}
+              {folderLabel(item.location)}
             </button>
           ) : null}
         </span>
@@ -232,7 +234,7 @@ export function GridLayout(props: RowsProps) {
 
 function GridTile(props: RowsProps & { item: ListItem }) {
   const { item, selected, focused, ...handlers } = props
-  const { starred } = useDrive()
+  const { access, starred } = useDrive()
   const isSelected = selected.has(item.path)
   const { active: dropActive, dropProps } = useDropTarget(acceptsDrop(item) ? item.path : undefined)
 
@@ -243,7 +245,7 @@ function GridTile(props: RowsProps & { item: ListItem }) {
       aria-selected={isSelected}
       data-path={item.path}
       tabIndex={focused === item.path ? 0 : -1}
-      draggable={!item.areaRoot && !item.binEntry}
+      draggable={isMovable(item, access)}
       onClick={(event) => handlers.onClick(item, event)}
       onDoubleClick={() => handlers.onOpen(item)}
       onContextMenu={(event) => handlers.onContextMenu(item, event)}
@@ -305,6 +307,11 @@ function Thumbnail({ item }: { item: DriveItem }) {
       )}
     </div>
   )
+}
+
+/** Whether `item` can be dragged to another folder. */
+function isMovable(item: ListItem, access: DriveAccess) {
+  return !item.areaRoot && !item.binEntry && canWrite(access, item.path)
 }
 
 function acceptsDrop(item: ListItem) {

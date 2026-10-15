@@ -106,22 +106,3 @@ test('details pane shows where a file is and who can read it', async ({ page }) 
   await expect(details).toContainText('/pub/pubky-drive/files/photo-notes.txt')
   await expect(details).toContainText('3 bytes')
 })
-
-test('entire-homeserver mode shows the storage roots and hides the app data', async ({ page }) => {
-  await signUp(page, 'Entire homeserver')
-  await expect(page.getByRole('navigation', { name: 'Folders and views' })).toContainText(
-    'Entire homeserver',
-  )
-  await openArea(page, 'Private')
-  await uploadFiles(page, [{ name: 'root-file.txt', text: 'x' }])
-  await row(page, 'root-file.txt').click()
-  await page.keyboard.press('Delete')
-  await expect(page.getByRole('status')).toContainText('moved to bin')
-
-  // The bin lives in /priv/pubky-drive/bin/. The app folder stays visible, because it holds the
-  // drive-folder files, but its app data folders are hidden.
-  await row(page, 'pubky-drive').dblclick()
-  await expect(page.getByText('Drop files here')).toBeVisible()
-  await page.getByRole('link', { name: 'Bin' }).click()
-  await expect(row(page, 'root-file.txt')).toBeVisible()
-})

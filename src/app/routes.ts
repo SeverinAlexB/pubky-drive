@@ -3,10 +3,17 @@
 import { useSyncExternalStore } from 'react'
 import type { Area } from '../drive/paths'
 
+/** The Drive folders (My Drive), or the whole homeserver storage. */
+export type Scope = 'drive' | 'homeserver'
+
 export type Route =
   | { view: 'my-drive' }
-  /** `folder` is the path inside the area root, without leading or trailing slash ('' for the root). */
-  | { view: 'folder'; area: Area; folder: string }
+  | { view: 'homeserver' }
+  /**
+   * A folder in one area of a scope. `folder` is the path inside the area root, without leading
+   * or trailing slash ('' for the root).
+   */
+  | { view: 'folder'; scope: Scope; area: Area; folder: string }
   | { view: 'recent' }
   | { view: 'starred' }
   | { view: 'bin' }
@@ -19,10 +26,13 @@ export function parseRoute(hash: string): Route {
   const segments = pathPart.split('/').filter(Boolean)
 
   switch (segments[0]) {
-    case 'drive': {
+    case 'drive':
+    case 'homeserver': {
+      const scope = segments[0]
       const area = segments[1]
-      if (area !== 'public' && area !== 'private') return { view: 'my-drive' }
-      return { view: 'folder', area, folder: segments.slice(2).map(safeDecode).join('/') }
+      if (area !== 'public' && area !== 'private')
+        return { view: scope === 'drive' ? 'my-drive' : 'homeserver' }
+      return { view: 'folder', scope, area, folder: segments.slice(2).map(safeDecode).join('/') }
     }
     case 'recent':
     case 'starred':
@@ -43,7 +53,7 @@ export function routeHash(route: Route): string {
       return '#/drive'
     case 'folder': {
       const folder = route.folder.split('/').filter(Boolean).map(encodeURIComponent).join('/')
-      return `#/drive/${route.area}${folder ? `/${folder}` : ''}`
+      return `#/${route.scope}/${route.area}${folder ? `/${folder}` : ''}`
     }
     case 'search':
       return `#/search?${new URLSearchParams({ q: route.query })}`

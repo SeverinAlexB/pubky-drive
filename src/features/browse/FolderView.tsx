@@ -1,37 +1,47 @@
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDrive } from '../../app/DriveContext'
-import { AREA_LABELS, folderRoute } from '../../app/locations'
-import { navigate } from '../../app/routes'
+import { areaLabel, folderRoute } from '../../app/locations'
+import { navigate, type Route, type Scope } from '../../app/routes'
 import { useLoad } from '../../app/useLoad'
+import { useViewPreferences } from '../../app/viewPreferences'
+import { APP_ID } from '../../config'
+import { canWrite, DRIVE_ROOTS, HOMESERVER_ROOTS } from '../../drive/access'
 import { itemFromPath } from '../../drive/items'
 import { parentOf, type Area, type StoragePath } from '../../drive/paths'
 import { followEvents } from '../../pubky/events'
 import { Menu, separator, type MenuEntry } from '../../ui/Menu'
 import { itemMenuEntries, newMenuEntries } from '../actions/menus'
 import { useItemActions } from '../actions/useItemActions'
-import { useViewPreferences } from '../../app/viewPreferences'
+import { HomeserverBanner, HomeserverLocked } from '../homeserver/HomeserverNotices'
 import { useUploads } from '../upload/UploadsProvider'
 import { useDropTarget } from './dragAndDrop'
 import { ItemBrowser } from './ItemBrowser'
+import type { ListItem } from './listItem'
 
 interface FolderViewProps {
+  scope: Scope
   area: Area
   /** The folder's path inside the area root, '' for the root. */
   folder: string
 }
 
-/** One folder's contents, kept up to date by the event stream. See docs/spec/02-navigation.md. */
-export function FolderView({ area, folder }: FolderViewProps) {
+/**
+ * One folder's contents in My Drive or the Homeserver section, kept up to date by the event
+ * stream. See docs/spec/02-navigation.md.
+ */
+export function FolderView({ scope, area, folder }: FolderViewProps) {
   const { drive, access, session, version } = useDrive()
-  const root = access.roots[area]
+  const root =
+    scope === 'drive' ? access.roots[area] : access.homeserver[area] && HOMESERVER_ROOTS[area]
   const path = root && ((folder ? `${root}${folder}/` : root) as StoragePath)
   const [liveVersion, setLiveVersion] = useState(0)
 
-  const load = useCallback(
-    () => (path ? drive.listFolder(path) : Promise.resolve([])),
-    [drive, path],
-  )
+  const load = useCallback(async (): Promise<ListItem[]> => {
+    if (!path) return []
+    const items = await drive.listFolder(path)
+    return scope === 'homeserver' ? items.map(withHomeserverBadge) : items
+  }, [drive, path, scope])
   // Reload after changes made here (`version`) and elsewhere (`liveVersion`).
   const { data: items, error, retry } = useLoad(load, `${version}:${liveVersion}`)
 
@@ -60,73 +70,100 @@ export function FolderView({ area, folder }: FolderViewProps) {
   }, [session, path])
 
   if (!root || !path) {
+    if (scope === 'homeserver') return <HomeserverLocked />
     return (
       <div className="browser-state">
-        <h2>No access to {AREA_LABELS[area]}</h2>
+        <h2>No access to {areaLabel(scope, area)}</h2>
         <p>
-          This session can’t read or write the {AREA_LABELS[area].toLowerCase()} area. Sign out and
-          sign in again to grant access.
+          This session can’t read or write this area. Sign out and sign in again to grant access.
         </p>
       </div>
     )
   }
 
-  const goUp = () =>
-    navigate(path === root ? { view: 'my-drive' } : folderRoute(parentOf(path), access))
+  const sectionRoute: Route = scope === 'drive' ? { view: 'my-drive' } : { view: 'homeserver' }
+  const goUp = () => navigate(path === root ? sectionRoute : folderRoute(parentOf(path)))
+  const writable = canWrite(access, path)
 
   return (
     <ItemBrowser
       key={path}
-      title={<Breadcrumbs area={area} root={root} path={path} />}
+      title={<Breadcrumbs scope={scope} area={area} root={root} path={path} writable={writable} />}
       items={items}
       error={error}
       onRetry={retry}
       columns="owner"
-      folder={path}
+      folder={writable ? path : undefined}
       onGoUp={goUp}
+      banner={scope === 'homeserver' ? <HomeserverBanner /> : undefined}
       emptyState={
-        <>
-          <h2>Drop files here</h2>
-          <p>or use the New button.</p>
-        </>
+        writable ? (
+          <>
+            <h2>Drop files here</h2>
+            <p>or use the New button.</p>
+          </>
+        ) : (
+          <p>This folder is empty.</p>
+        )
       }
     />
   )
 }
 
+/** Marks the folders that belong to Pubky Drive, so they're recognisable among other apps' data. */
+function withHomeserverBadge(item: ListItem): ListItem {
+  if (item.path === `/pub/${APP_ID}/` || item.path === `/priv/${APP_ID}/`) {
+    return { ...item, badge: 'Pubky Drive' }
+  }
+  if (item.path === DRIVE_ROOTS.public || item.path === DRIVE_ROOTS.private) {
+    return { ...item, badge: 'Opens in My Drive' }
+  }
+  return item
+}
+
 interface BreadcrumbsProps {
+  scope: Scope
   area: Area
   root: StoragePath
   path: StoragePath
+  writable: boolean
 }
 
-/** `My Drive › Public › photos ▾`. Earlier segments open their folder and accept dropped items. */
-function Breadcrumbs({ area, root, path }: BreadcrumbsProps) {
+/**
+ * `My Drive › Public › photos ▾` or `Homeserver › /pub › pubky.app ▾`. Earlier segments open their
+ * folder and accept dropped items.
+ */
+function Breadcrumbs({ scope, area, root, path, writable }: BreadcrumbsProps) {
   const { access, starred } = useDrive()
   const actions = useItemActions()
   const uploads = useUploads()
   const { setDetailsOpen } = useViewPreferences()
   const [menu, setMenu] = useState<{ element: Element; entries: MenuEntry[] }>()
 
-  const segments = path.slice(root.length).split('/').filter(Boolean)
-  const crumbs: { label: string; folder?: StoragePath }[] = [
-    { label: 'My Drive' },
-    { label: AREA_LABELS[area], folder: root },
-    ...segments.map((segment, index) => ({
-      label: segment,
-      folder: `${root}${segments.slice(0, index + 1).join('/')}/` as StoragePath,
-    })),
-  ]
+  const crumbs = useMemo(() => {
+    const segments = path.slice(root.length).split('/').filter(Boolean)
+    return [
+      { label: scope === 'drive' ? 'My Drive' : 'Homeserver' },
+      { label: areaLabel(scope, area), folder: root },
+      ...segments.map((segment, index) => ({
+        label: segment,
+        folder: `${root}${segments.slice(0, index + 1).join('/')}/` as StoragePath,
+      })),
+    ] as { label: string; folder?: StoragePath }[]
+  }, [scope, area, root, path])
   const last = crumbs[crumbs.length - 1]
 
   const currentFolderMenu = (): MenuEntry[] => {
-    const newEntries = newMenuEntries({
-      actions,
-      folder: path,
-      pickFiles: uploads.pickFiles,
-      pickFolder: uploads.pickFolder,
-    })
-    if (path === root) return newEntries
+    const newEntries = writable
+      ? newMenuEntries({
+          actions,
+          folder: path,
+          pickFiles: uploads.pickFiles,
+          pickFolder: uploads.pickFolder,
+        })
+      : []
+    if (path === root)
+      return newEntries.length > 0 ? newEntries : [{ type: 'caption', label: 'Read only' }]
     const folderEntries = itemMenuEntries([itemFromPath(path)], {
       actions,
       access,
@@ -134,20 +171,20 @@ function Breadcrumbs({ area, root, path }: BreadcrumbsProps) {
       preview: () => {},
       showDetails: () => setDetailsOpen(true),
     }).filter((entry) => entry.type !== 'item' || entry.label !== 'Download')
-    return [...newEntries, separator, ...folderEntries]
+    return newEntries.length > 0 ? [...newEntries, separator, ...folderEntries] : folderEntries
   }
+
+  const sectionRoute: Route = scope === 'drive' ? { view: 'my-drive' } : { view: 'homeserver' }
 
   return (
     <nav className="breadcrumbs" aria-label="Folder path">
       {crumbs.slice(0, -1).map((crumb, index) => (
-        <span key={crumb.folder ?? 'my-drive'} className="breadcrumb-part">
+        <span key={crumb.folder ?? 'section'} className="breadcrumb-part">
           <Crumb
             label={crumb.label}
             folder={crumb.folder}
             collapsed={crumbs.length > 4 && index > 0 && index < crumbs.length - 3}
-            onOpen={() =>
-              navigate(crumb.folder ? folderRoute(crumb.folder, access) : { view: 'my-drive' })
-            }
+            onOpen={() => navigate(crumb.folder ? folderRoute(crumb.folder) : sectionRoute)}
           />
           <ChevronRight size={20} className="breadcrumb-separator" aria-hidden />
         </span>

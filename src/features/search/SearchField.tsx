@@ -14,7 +14,7 @@ const MAX_SUGGESTIONS = 6
 
 /** The header search field with suggestions. See docs/spec/10-search.md. */
 export function SearchField({ initialQuery = '' }: { initialQuery?: string }) {
-  const { access, loadSearchIndex } = useDrive()
+  const { loadSearchIndex } = useDrive()
   const [query, setQuery] = useState(initialQuery)
   const [highlighted, setHighlighted] = useState(-1)
   const [open, setOpen] = useState(false)
@@ -50,7 +50,7 @@ export function SearchField({ initialQuery = '' }: { initialQuery?: string }) {
 
   const choose = (item: DriveItem) => {
     setOpen(false)
-    navigate(folderRoute(item.kind === 'folder' ? item.path : parentOf(item.path), access))
+    navigate(folderRoute(item.kind === 'folder' ? item.path : parentOf(item.path)))
   }
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
@@ -125,9 +125,7 @@ export function SearchField({ initialQuery = '' }: { initialQuery?: string }) {
             >
               <FileIcon item={item} />
               <span className="search-suggestion-name">{item.name}</span>
-              <span className="search-suggestion-location">
-                {folderLabel(parentOf(item.path), access)}
-              </span>
+              <span className="search-suggestion-location">{folderLabel(parentOf(item.path))}</span>
             </li>
           ))}
         </ul>

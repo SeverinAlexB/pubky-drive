@@ -16,8 +16,8 @@ import {
   Upload,
   UserPlus,
 } from 'lucide-react'
-import type { DriveAccess } from '../../drive/access'
-import type { StoragePath } from '../../drive/paths'
+import { canWrite, type DriveAccess } from '../../drive/access'
+import { parentOf, type StoragePath } from '../../drive/paths'
 import { separator, type MenuEntry } from '../../ui/Menu'
 import type { ListItem } from '../browse/listItem'
 import type { ItemActions } from './useItemActions'
@@ -39,6 +39,9 @@ export function itemMenuEntries(items: ListItem[], context: ItemMenuContext): Me
   const single = items.length === 1 ? items[0] : undefined
   const allStarred = items.every((item) => starred.has(item.path))
   const anyPublic = items.some((item) => item.area === 'public')
+  // Items outside what the session may write (homeserver files with view access) can only be read.
+  const writable = items.every((item) => canWrite(access, item.path))
+  const copyable = single !== undefined && canWrite(access, parentOf(single.path))
 
   return [
     ...(single?.kind === 'file'
@@ -64,7 +67,7 @@ export function itemMenuEntries(items: ListItem[], context: ItemMenuContext): Me
       label: 'Rename',
       icon: Pencil,
       shortcut: 'F2',
-      disabled: !single,
+      disabled: !single || !writable,
       onSelect: () => single && actions.rename(single),
     },
     ...(single?.kind === 'file' || !single
@@ -73,7 +76,7 @@ export function itemMenuEntries(items: ListItem[], context: ItemMenuContext): Me
             type: 'item' as const,
             label: 'Make a copy',
             icon: Copy,
-            disabled: !single,
+            disabled: !copyable,
             onSelect: () => single && void actions.makeCopy(single),
           },
         ]
@@ -111,6 +114,7 @@ export function itemMenuEntries(items: ListItem[], context: ItemMenuContext): Me
           label: 'Move',
           icon: FolderInput,
           shortcut: '⌥⌘M',
+          disabled: !writable,
           onSelect: () => actions.move(items),
         },
         {
@@ -147,6 +151,7 @@ export function itemMenuEntries(items: ListItem[], context: ItemMenuContext): Me
           label: 'Move to bin',
           icon: Trash2,
           shortcut: 'Delete',
+          disabled: !writable,
           onSelect: () => void actions.moveToBin(items),
         }
       : {
@@ -154,6 +159,7 @@ export function itemMenuEntries(items: ListItem[], context: ItemMenuContext): Me
           label: 'Delete forever',
           icon: Trash2,
           shortcut: 'Delete',
+          disabled: !writable,
           onSelect: () => void actions.deleteForever(items),
         },
   ]

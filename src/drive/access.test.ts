@@ -1,52 +1,66 @@
 import { validateCapabilities } from '@synonymdev/pubky'
 import { describe, expect, test } from 'vitest'
-import { accessFromCapabilities, requestedCapabilities } from './access'
+import { accessFromCapabilities, canWrite, homeserverLevel, requestedCapabilities } from './access'
 
 describe('requestedCapabilities', () => {
-  test('drive-folder mode asks only for the app folders', () => {
-    expect(validateCapabilities(requestedCapabilities('drive-folder')).split(',').sort()).toEqual([
+  const requested = (request: Parameters<typeof requestedCapabilities>[0]) =>
+    validateCapabilities(requestedCapabilities(request)).split(',').sort()
+
+  test('the Drive folder only', () => {
+    expect(requested('drive')).toEqual(['/priv/pubky-drive/:rw', '/pub/pubky-drive/:rw'])
+  })
+
+  test('viewing the homeserver adds read access to both roots', () => {
+    expect(requested('view')).toEqual([
+      '/priv/:r',
       '/priv/pubky-drive/:rw',
+      '/pub/:r',
       '/pub/pubky-drive/:rw',
     ])
   })
 
-  test('entire-homeserver mode asks for both storage roots', () => {
-    expect(
-      validateCapabilities(requestedCapabilities('entire-homeserver')).split(',').sort(),
-    ).toEqual(['/priv/:rw', '/pub/:rw'])
+  test('managing the homeserver asks for both roots', () => {
+    expect(requested('manage')).toEqual(['/priv/:rw', '/pub/:rw'])
   })
 })
 
 describe('accessFromCapabilities', () => {
-  test('drive-folder approval gives both app areas and app data', () => {
-    expect(accessFromCapabilities(['/pub/pubky-drive/:rw', '/priv/pubky-drive/:rw'])).toEqual({
-      mode: 'drive-folder',
-      roots: { public: '/pub/pubky-drive/files/', private: '/priv/pubky-drive/files/' },
-      appData: true,
-    })
+  const driveRoots = { public: '/pub/pubky-drive/files/', private: '/priv/pubky-drive/files/' }
+
+  test('Drive-folder approval gives both Drive areas and app data, but no homeserver', () => {
+    const access = accessFromCapabilities(['/pub/pubky-drive/:rw', '/priv/pubky-drive/:rw'])
+    expect(access).toEqual({ roots: driveRoots, appData: true, homeserver: {} })
+    expect(homeserverLevel(access)).toBeUndefined()
   })
 
-  test('entire-homeserver approval browses from the storage roots', () => {
-    expect(accessFromCapabilities(['/pub/:rw', '/priv/:rw'])).toEqual({
-      mode: 'entire-homeserver',
-      roots: { public: '/pub/', private: '/priv/' },
-      appData: true,
-    })
+  test('view approval reads the homeserver but writes only the Drive', () => {
+    const access = accessFromCapabilities([
+      '/pub/pubky-drive/:rw',
+      '/priv/pubky-drive/:rw',
+      '/pub/:r',
+      '/priv/:r',
+    ])
+    expect(homeserverLevel(access)).toBe('view')
+    expect(canWrite(access, '/pub/pubky-drive/files/a.txt')).toBe(true)
+    expect(canWrite(access, '/pub/pubky.app/profile.json')).toBe(false)
+    expect(canWrite(access, '/priv/pubky-drive/bin/x/entry.json')).toBe(true)
+    expect(canWrite(access, '/priv/pubky-drive/')).toBe(false)
   })
 
-  test('a root capability covers everything', () => {
-    expect(accessFromCapabilities(['/:rw']).roots).toEqual({ public: '/pub/', private: '/priv/' })
+  test('manage approval keeps the Drive areas and writes everywhere', () => {
+    const access = accessFromCapabilities(['/pub/:rw', '/priv/:rw'])
+    expect(access.roots).toEqual(driveRoots)
+    expect(homeserverLevel(access)).toBe('manage')
+    expect(canWrite(access, '/pub/pubky.app/profile.json')).toBe(true)
   })
 
-  test('a narrowed approval leaves the missing area and app data unavailable', () => {
-    expect(accessFromCapabilities(['/pub/pubky-drive/:rw'])).toEqual({
-      mode: 'drive-folder',
-      roots: { public: '/pub/pubky-drive/files/' },
+  test('a narrowed approval leaves the missing parts unavailable', () => {
+    const access = accessFromCapabilities(['/pub/pubky-drive/:rw', '/pub/:r'])
+    expect(access).toEqual({
+      roots: { public: driveRoots.public },
       appData: false,
+      homeserver: { public: 'view' },
     })
-  })
-
-  test('read-only access is not enough for an area', () => {
-    expect(accessFromCapabilities(['/pub/pubky-drive/:r']).roots).toEqual({})
+    expect(homeserverLevel(access)).toBeUndefined()
   })
 })

@@ -1,9 +1,9 @@
 // Pubky Ring sign-in, session persistence and sign-out.
 
 import { AuthFlowKind, Keypair, PublicKey } from '@synonymdev/pubky'
-import type { GrantAuthFlow, Session } from '@synonymdev/pubky'
+import type { GrantAuthFlow, Session, Signer } from '@synonymdev/pubky'
 import { APP_ID, HTTP_RELAY, STORAGE_NAMESPACE } from '../config'
-import { requestedCapabilities, type AccessMode } from '../drive/access'
+import { requestedCapabilities, type AccessRequest } from '../drive/access'
 import { pubky } from './client'
 
 const SESSION_KEY = STORAGE_NAMESPACE
@@ -19,11 +19,15 @@ export interface RingAuthFlow {
   cancel: () => void
 }
 
-export async function startRingAuthFlow(mode: AccessMode): Promise<RingAuthFlow> {
-  const flow = await pubky.startGrantAuthFlow(requestedCapabilities(mode), AuthFlowKind.signin(), {
-    clientId: APP_ID,
-    relay: HTTP_RELAY,
-  })
+export async function startRingAuthFlow(request: AccessRequest): Promise<RingAuthFlow> {
+  const flow = await pubky.startGrantAuthFlow(
+    requestedCapabilities(request),
+    AuthFlowKind.signin(),
+    {
+      clientId: APP_ID,
+      relay: HTTP_RELAY,
+    },
+  )
   const approval = awaitRingApproval(flow)
 
   return {
@@ -34,10 +38,16 @@ export async function startRingAuthFlow(mode: AccessMode): Promise<RingAuthFlow>
 }
 
 /**
- * Development only: creates a random identity on `homeserver` and approves a sign-in request for
- * `mode` with it, like Pubky Ring would. Requires `signup_mode = "open"` on the homeserver.
+ * The identity created by `signupDevelopmentUser`, kept in memory so later access requests can be
+ * approved without Pubky Ring. Development only; it's gone after a reload.
  */
-export async function signupDevelopmentUser(homeserver: string, mode: AccessMode) {
+let developmentSigner: Signer | undefined
+
+/**
+ * Development only: creates a random identity on `homeserver` and approves a Drive-folder
+ * sign-in with it, like Pubky Ring would. Requires `signup_mode = "open"` on the homeserver.
+ */
+export async function signupDevelopmentUser(homeserver: string) {
   const signer = pubky.signer(Keypair.random())
   try {
     await signer.signup(PublicKey.from(homeserver.trim()), null)
@@ -48,9 +58,21 @@ export async function signupDevelopmentUser(homeserver: string, mode: AccessMode
     )
   }
 
-  const flow = await startRingAuthFlow(mode)
+  developmentSigner = signer
+  const flow = await startRingAuthFlow('drive')
   await signer.approveAuthRequest(flow.authorizationUrl)
   return flow.awaitApproval
+}
+
+/** Whether the development identity of `publicKeyZ32` is available to approve requests. */
+export function hasDevelopmentIdentity(publicKeyZ32: string) {
+  return developmentSigner?.publicKey.z32() === publicKeyZ32
+}
+
+/** Development only: approves an authorization request with the development identity. */
+export async function approveWithDevelopmentIdentity(authorizationUrl: string) {
+  if (!developmentSigner) throw new Error('No development identity is available.')
+  await developmentSigner.approveAuthRequest(authorizationUrl)
 }
 
 export async function saveSession(session: Session) {
@@ -72,6 +94,26 @@ export async function restoreSavedSession() {
     }
     throw error
   }
+}
+
+/**
+ * Saves `next`, a session with different access for the same identity, in place of `current`,
+ * then ends `current` on the homeserver. Throws when `next` belongs to another identity.
+ */
+export async function replaceSession(current: Session, next: Session) {
+  if (next.info.publicKey.z32() !== current.info.publicKey.z32()) {
+    throw new Error(
+      'Pubky Ring approved with a different identity. Approve with the identity you signed in with.',
+    )
+  }
+  const previousId = localStorage.getItem(SESSION_KEY)
+  await saveSession(next)
+  try {
+    await current.signout()
+  } catch {
+    // The previous grant may already have expired; the new session works either way.
+  }
+  if (previousId) await pubky.browserSessionStore.remove(previousId).catch(() => {})
 }
 
 /** Ends the session on the homeserver (in every tab) and forgets it locally. */

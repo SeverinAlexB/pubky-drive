@@ -40,78 +40,8 @@
   font-weight: 500;
 }
 
-.signin-card h2:not(:first-child) {
-  margin-top: 24px;
-}
-
-.signin-modes {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.signin-mode {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid var(--divider);
-  border-radius: 16px;
-  cursor: pointer;
-}
-
-.signin-mode.selected {
-  border-color: var(--accent);
-  background: var(--accent-faint);
-}
-
-.signin-mode input {
-  margin-top: 3px;
-}
-
-.signin-mode > span {
-  display: grid;
-  gap: 4px;
-}
-
-.signin-ring {
-  display: flex;
-  gap: 24px;
-  align-items: center;
-}
-
-.signin-qr {
-  display: grid;
-  place-items: center;
-  width: 236px;
-  height: 236px;
-  flex: none;
-  border: 1px solid var(--divider);
-  border-radius: 16px;
-}
-
-.signin-qr-placeholder {
-  display: grid;
-  justify-items: center;
-  gap: 8px;
-  padding: 16px;
-  text-align: center;
-  color: var(--text-muted);
-}
-
-.signin-actions {
-  display: grid;
-  gap: 12px;
-  justify-items: start;
-}
-
-.signin-actions p {
-  margin: 0;
-}
-
-.signin-actions a[aria-disabled='true'] {
-  opacity: 0.38;
-  pointer-events: none;
+.signin-scope {
+  margin: 0 0 20px;
 }
 
 .signin-dev-form {
@@ -120,11 +50,6 @@
 }
 
 @media (width < 640px) {
-  .signin-modes {
-    grid-template-columns: 1fr;
-  }
-
-  .signin-ring,
   .signin-dev-form {
     flex-direction: column;
     align-items: stretch;

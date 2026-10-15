@@ -27,6 +27,7 @@ import { useDrive } from '../../app/DriveContext'
 import { folderRoute } from '../../app/locations'
 import { navigate } from '../../app/routes'
 import { useViewPreferences } from '../../app/viewPreferences'
+import { canWrite } from '../../drive/access'
 import { fileTypeOf, type DriveItem, type FileType } from '../../drive/items'
 import type { StoragePath } from '../../drive/paths'
 import { Menu, separator, type MenuAnchor, type MenuEntry } from '../../ui/Menu'
@@ -115,7 +116,7 @@ export function ItemBrowser({
 
   const open = (item: ListItem) => {
     if (item.binEntry) notify('To open this item, restore it from the bin first.')
-    else if (item.kind === 'folder') navigate(folderRoute(item.path, access))
+    else if (item.kind === 'folder') navigate(folderRoute(item.path))
     else setPreviewPath(item.path)
   }
 
@@ -176,7 +177,12 @@ export function ItemBrowser({
     const command = event.metaKey || event.ctrlKey
     const single = selectedItems.length === 1 ? selectedItems[0] : undefined
     const inBin = selectedItems.some((item) => item.binEntry)
-    const modifiable = selectedItems.length > 0 && selectedItems.every((item) => !item.areaRoot)
+    // Reading actions work on any item; changing ones need write access to every selected item.
+    const readable =
+      selectedItems.length > 0 && selectedItems.every((item) => !item.areaRoot) && !inBin
+    const modifiable =
+      selectedItems.length > 0 &&
+      selectedItems.every((item) => !item.areaRoot && canWrite(access, item.path))
     const organisable = modifiable && !inBin
     const rowStep = layout === 'grid' ? gridColumns(listRef.current) : 1
 
@@ -202,7 +208,7 @@ export function ItemBrowser({
       actions.rename(single)
     } else if (command && event.altKey && event.code === 'KeyM' && organisable) {
       actions.move(selectedItems)
-    } else if (command && event.altKey && event.code === 'KeyS' && organisable) {
+    } else if (command && event.altKey && event.code === 'KeyS' && readable) {
       void actions.toggleStar(selectedItems)
     } else if (
       command &&
@@ -212,7 +218,7 @@ export function ItemBrowser({
       !inBin
     ) {
       setPreviewPath(single.path)
-    } else if (command && event.altKey && event.code === 'KeyC' && organisable) {
+    } else if (command && event.altKey && event.code === 'KeyC' && readable) {
       void actions.copyLink(selectedItems)
     } else if (event.shiftKey && event.key === 'F10' && selectedItems.length > 0) {
       openMenu({ element: document.activeElement ?? document.body }, selectedItems)
@@ -471,6 +477,7 @@ function SelectionBar({
   const isBin = binEntries.length > 0
   const isAreas = items.some((item) => item.areaRoot)
   const anyPublic = items.some((item) => item.area === 'public')
+  const writable = items.every((item) => canWrite(access, item.path))
 
   return (
     <div className="selection-bar" role="toolbar" aria-label="Selection actions">
@@ -510,10 +517,16 @@ function SelectionBar({
               icon={Download}
               onClick={() => void actions.download(items)}
             />
-            <ToolbarButton label="Move" icon={FolderInput} onClick={() => actions.move(items)} />
+            <ToolbarButton
+              label="Move"
+              icon={FolderInput}
+              disabled={!writable}
+              onClick={() => actions.move(items)}
+            />
             <ToolbarButton
               label={access.appData ? 'Move to bin' : 'Delete forever'}
               icon={Trash2}
+              disabled={!writable}
               onClick={() => void actions.moveToBin(items)}
             />
             <ToolbarButton

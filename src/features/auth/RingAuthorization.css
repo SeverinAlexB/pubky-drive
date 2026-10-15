@@ -1,0 +1,46 @@
+.ring-authorization {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.ring-qr {
+  display: grid;
+  place-items: center;
+  width: 236px;
+  height: 236px;
+  flex: none;
+  border: 1px solid var(--divider);
+  border-radius: 16px;
+}
+
+.ring-qr-placeholder {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 16px;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.ring-actions {
+  display: grid;
+  gap: 12px;
+  justify-items: start;
+}
+
+.ring-actions p {
+  margin: 0;
+}
+
+.ring-actions a[aria-disabled='true'] {
+  opacity: 0.38;
+  pointer-events: none;
+}
+
+@media (width < 640px) {
+  .ring-authorization {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

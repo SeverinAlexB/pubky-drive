@@ -1,0 +1,38 @@
+.access-options {
+  display: grid;
+  gap: 8px;
+}
+
+.access-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--divider);
+  border-radius: 16px;
+  cursor: pointer;
+}
+
+.access-option.selected {
+  border-color: var(--accent);
+  background: var(--accent-faint);
+}
+
+.access-option input {
+  margin-top: 3px;
+}
+
+.access-option-icon {
+  flex: none;
+  color: var(--text-muted);
+}
+
+.access-option > span {
+  display: grid;
+  gap: 4px;
+}
+
+.access-current {
+  font-weight: 400;
+  color: var(--text-muted);
+}

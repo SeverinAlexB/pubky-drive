@@ -308,6 +308,17 @@
   flex: none;
 }
 
+.file-badge {
+  flex: none;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: var(--accent-faint);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+}
+
 .file-star {
   flex: none;
   color: var(--text-muted);

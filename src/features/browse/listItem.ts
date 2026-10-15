@@ -10,4 +10,6 @@ export interface ListItem extends DriveItem {
   binEntry?: BinEntry
   /** For Recent, Starred and search: the folder the item is in. */
   location?: StoragePath
+  /** A short note after the name, such as "Pubky Drive" for the app's own folder in the Homeserver section. */
+  badge?: string
 }

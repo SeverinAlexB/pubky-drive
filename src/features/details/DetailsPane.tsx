@@ -52,7 +52,7 @@ function ItemDetails({
   item: ListItem
   onManageAccess: (item: DriveItem) => void
 }) {
-  const { drive, access, ownerZ32 } = useDrive()
+  const { drive, ownerZ32 } = useDrive()
   const { notify } = useNotifier()
   const loadBytes = useCallback((file: DriveItem) => drive.files.getBytes(file.path), [drive])
   const isImage = fileTypeOf(item) === 'image' && (item.sizeBytes ?? 0) < 20 * 1024 * 1024
@@ -105,14 +105,14 @@ function ItemDetails({
               <dt>Location</dt>
               <dd>
                 {item.binEntry ? (
-                  folderLabel(parentOf(item.binEntry.originalPath), access)
+                  folderLabel(parentOf(item.binEntry.originalPath))
                 ) : (
                   <button
                     type="button"
                     className="details-link"
-                    onClick={() => navigate(folderRoute(parentOf(item.path), access))}
+                    onClick={() => navigate(folderRoute(parentOf(item.path)))}
                   >
-                    {folderLabel(parentOf(item.path), access)}
+                    {folderLabel(parentOf(item.path))}
                   </button>
                 )}
               </dd>

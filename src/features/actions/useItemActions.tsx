@@ -3,7 +3,14 @@
 
 import { useMemo } from 'react'
 import { useDrive } from '../../app/DriveContext'
-import { AREA_LABELS, folderLabel, folderRoute, isAreaRoot } from '../../app/locations'
+import {
+  AREA_LABELS,
+  folderLabel,
+  folderRoute,
+  locate,
+  matchingFolderInOtherArea,
+} from '../../app/locations'
+import { canWrite } from '../../drive/access'
 import { navigate } from '../../app/routes'
 import { describeError } from '../../drive/errors'
 import { itemFromPath, type DriveItem } from '../../drive/items'
@@ -70,6 +77,28 @@ export function useItemActions() {
 
     function plural(items: readonly { name: string }[], noun = 'item') {
       return items.length === 1 ? `‘${items[0].name}’` : `${items.length} ${noun}s`
+    }
+
+    /**
+     * Asks before items move between My Drive and the rest of the homeserver, because that changes
+     * which apps find them. Resolves to true when no confirmation is needed.
+     */
+    async function confirmSectionChange(items: readonly DriveItem[], target: StoragePath) {
+      const targetScope = locate(target).scope
+      if (items.every((item) => locate(item.path).scope === targetScope)) return true
+      return confirm(
+        targetScope === 'drive'
+          ? {
+              title: 'Move into your Drive?',
+              message: `${plural(items)} will move into Pubky Drive. Apps that use ${items.length === 1 ? 'it' : 'them'} at the current place won’t find ${items.length === 1 ? 'it' : 'them'} any more.`,
+              confirmLabel: 'Move',
+            }
+          : {
+              title: 'Move out of your Drive?',
+              message: `${plural(items)} will move to ${folderLabel(target)}, outside Pubky Drive’s folder.`,
+              confirmLabel: 'Move',
+            },
+      )
     }
 
     async function moveEach(
@@ -177,9 +206,10 @@ export function useItemActions() {
       ) {
         const movable = items.filter((item) => parentOf(item.path) !== target)
         if (movable.length === 0) return
+        if (!(await confirmSectionChange(movable, target))) return
         try {
           const moved = await run('Moving', (onProgress) => moveEach(movable, target, onProgress))
-          notify(`${plural(movable)} moved to ‘${folderLabel(target, access)}’`, {
+          notify(`${plural(movable)} moved to ‘${folderLabel(target)}’`, {
             action: {
               label: 'Undo',
               run: () =>
@@ -299,9 +329,9 @@ export function useItemActions() {
 
       /** Moves an item to the same place in the other area, after confirmation. */
       async changeArea(item: DriveItem, area: Area) {
-        const root = access.roots[area]
-        const fromRoot = access.roots[item.area]
-        if (!root || !fromRoot) return false
+        if (area === item.area) return false
+        const target = matchingFolderInOtherArea(item.path)
+        if (!canWrite(access, item.path) || !canWrite(access, target)) return false
         const confirmed = await confirm(
           area === 'public'
             ? {
@@ -317,13 +347,12 @@ export function useItemActions() {
         )
         if (!confirmed) return false
 
-        const target = `${root}${parentOf(item.path).slice(fromRoot.length)}` as StoragePath
         const moved = await run('Moving', (onProgress) =>
           moveItem(drive, item, target, item.name, 'number', onProgress),
         )
         await updateStarred((current) => followMove(current, item.path, moved)).catch(() => {})
         notify(`‘${item.name}’ is now ${AREA_LABELS[area].toLowerCase()}`, {
-          action: { label: 'Show', run: () => navigate(folderRoute(parentOf(moved), access)) },
+          action: { label: 'Show', run: () => navigate(folderRoute(parentOf(moved))) },
         })
         return true
       },
@@ -341,7 +370,7 @@ export function useItemActions() {
       },
 
       showLocation(item: DriveItem) {
-        navigate(folderRoute(parentOf(item.path), access))
+        navigate(folderRoute(parentOf(item.path)))
       },
 
       async restore(entries: bin.BinEntry[]) {
@@ -355,7 +384,7 @@ export function useItemActions() {
           notify(`${plural(entries)} restored`, {
             action: {
               label: 'Show location',
-              run: () => navigate(folderRoute(parentOf(restored[0]), access)),
+              run: () => navigate(folderRoute(parentOf(restored[0]))),
             },
           })
         })
@@ -393,10 +422,6 @@ export function useItemActions() {
           await run('Emptying bin', () => bin.emptyBin(drive, entries))
           notify('Bin emptied')
         })
-      },
-
-      canModify(item: DriveItem) {
-        return !isAreaRoot(item.path, access)
       },
     }
     return actions

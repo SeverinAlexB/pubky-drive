@@ -1,11 +1,8 @@
 import { expect, type Page } from '@playwright/test'
 
-export type AccessMode = 'Drive folder' | 'Entire homeserver'
-
 /** Creates a disposable testnet identity with the development shortcut and signs in. */
-export async function signUp(page: Page, mode: AccessMode = 'Drive folder') {
+export async function signUp(page: Page) {
   await page.goto('/')
-  await page.getByRole('radio', { name: new RegExp(mode) }).check()
   await page.getByRole('button', { name: 'Create identity and sign in' }).click()
   await expect(page.getByRole('navigation', { name: 'Folders and views' })).toBeVisible({
     timeout: 30_000,
@@ -62,4 +59,16 @@ export async function contextMenu(page: Page, name: string, ...path: string[]) {
     if (index < path.length - 1) await item.hover()
     else await item.click()
   }
+}
+
+/** Grants homeserver access through the access dialog, approved with the development identity. */
+export async function grantHomeserverAccess(
+  page: Page,
+  level: 'View all files' | 'Manage all files',
+) {
+  const dialog = page.getByRole('dialog', { name: 'What Pubky Drive can access' })
+  await dialog.getByRole('radio', { name: new RegExp(level) }).check()
+  await dialog.getByRole('button', { name: 'Continue with Pubky Ring' }).click()
+  await dialog.getByRole('button', { name: 'Approve with development identity' }).click()
+  await expect(page.getByRole('status')).toContainText('Access changed', { timeout: 30_000 })
 }

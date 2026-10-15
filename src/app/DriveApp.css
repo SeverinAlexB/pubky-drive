@@ -126,21 +126,17 @@
   outline-offset: -2px;
 }
 
-.sidebar-access {
-  margin-top: auto;
-  padding: 16px 8px 0;
-  color: var(--text-muted);
+.sidebar-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--divider);
+}
+
+.sidebar-hint {
+  margin-left: auto;
+  color: var(--text-faint);
   font-size: 12px;
-  line-height: 16px;
-}
-
-.sidebar-access strong {
-  color: var(--text);
-  font-size: 14px;
-}
-
-.sidebar-access p {
-  margin: 4px 0 0;
+  font-weight: 400;
 }
 
 /* Breadcrumbs */

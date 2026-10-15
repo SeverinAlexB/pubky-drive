@@ -64,31 +64,51 @@ read private files. The app says this wherever it asks you to choose an area.
 
 "My Drive" shows the two areas as top-level folders. Changing a file's general
 access in the share dialog moves the file to the same relative path in the
-other area.
+other area of the same section.
 
-## Access modes
+## Two sections: My Drive and Homeserver
 
-At sign-in, you choose what the app may access. The app requests the matching
-capabilities from Pubky Ring:
+**My Drive** holds the files Pubky Drive manages. Its Public and Private areas
+are always the Drive folders, `/pub/pubky-drive/files/` and
+`/priv/pubky-drive/files/`, whatever else the session may access. New folders,
+uploads, Recent and search work in My Drive.
 
-| Mode                   | Public area root          | Private area root          | Requested capabilities                       |
-| ---------------------- | ------------------------- | -------------------------- | -------------------------------------------- |
-| Drive folder (default) | `/pub/pubky-drive/files/` | `/priv/pubky-drive/files/` | `/pub/pubky-drive/:rw,/priv/pubky-drive/:rw` |
-| Entire homeserver      | `/pub/`                   | `/priv/`                   | `/pub/:rw,/priv/:rw`                         |
+The **Homeserver** section shows the raw storage, `/pub/` and `/priv/`,
+including other apps' data. It uses raw names in its breadcrumbs
+(`Homeserver › /pub › pubky.app`), shows a warning above every listing, and
+marks the app's own folders. A path inside the Drive folders always opens in My
+Drive, so the same file never appears in both sections with different names.
 
-In **Entire homeserver** mode, you can browse and change files that other apps
-wrote. The app warns that changing them can break those apps.
+## Access levels
 
-Pubky Ring can approve fewer capabilities than requested. After sign-in, the
-app reads the approved capabilities from `session.info.capabilities` and the
-mode from them, not from the original request. An area without read and write
-access appears disabled with an explanation, and features that need the
-app's private data (Starred and Bin) are turned off when it's missing.
+Sign-in asks Pubky Ring only for the Drive folder. Wider access is requested
+later, from the Homeserver section or the account menu, and replaces the
+session after Pubky Ring approves it:
+
+| Level            | Requested capabilities                       | What it allows                                |
+| ---------------- | -------------------------------------------- | --------------------------------------------- |
+| Drive folder     | `/pub/pubky-drive/:rw,/priv/pubky-drive/:rw` | My Drive, Starred and Bin                     |
+| View all files   | The Drive folder, plus `/pub/:r,/priv/:r`    | Also browse, preview and download any file    |
+| Manage all files | `/pub/:rw,/priv/:rw`                         | Also create, rename, move and delete any file |
+
+Pubky Ring can approve fewer capabilities than requested. The app reads the
+approved capabilities from `session.info.capabilities`, not from the request.
+Whether an item can be changed is decided per path (`canWrite` in
+`src/drive/access.ts`): inside a Drive folder or the app's data folders, or
+anywhere in an area with Manage access. Menus, drag and drop and shortcuts
+disable changes to other items; with View access the Homeserver section is
+read-only.
+
+The new session must belong to the identity that is signed in; a different
+identity is refused. After saving the new session, the app ends the old one.
+
+Moving items between My Drive and the rest of the homeserver asks for
+confirmation, because apps that read the old location won't find them.
 
 ## App data
 
 Data that the Homeserver doesn't store for files lives in the app's private
-folder, `/priv/pubky-drive/`, in both modes:
+folder, `/priv/pubky-drive/`:
 
 | Path                                          | Content                                              |
 | --------------------------------------------- | ---------------------------------------------------- |
@@ -96,8 +116,10 @@ folder, `/priv/pubky-drive/`, in both modes:
 | `/priv/pubky-drive/bin/<entry-id>/entry.json` | A binned item's original path, kind and binning time |
 | `/priv/pubky-drive/bin/<entry-id>/content/…`  | The binned item's files                              |
 
-In Entire homeserver mode, the listings hide `/priv/pubky-drive/app/` and
-`/priv/pubky-drive/bin/`, so that the bin doesn't appear twice.
+Listings in the Homeserver section hide `/priv/pubky-drive/app/` and
+`/priv/pubky-drive/bin/`, so that the bin doesn't appear twice. Starred items
+can be anywhere, including the Homeserver section; Restore only writes inside
+the areas the session can access.
 
 ## Folders
 

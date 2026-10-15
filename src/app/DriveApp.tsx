@@ -8,11 +8,16 @@ import {
   LogOut,
   Menu as MenuIcon,
   Plus,
+  Server,
+  ShieldCheck,
   Star,
   Trash2,
 } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { canWrite, homeserverLevel, HOMESERVER_ROOTS, type DriveAccess } from '../drive/access'
 import { describeError } from '../drive/errors'
+import { useAccessDialog } from '../features/access/AccessDialog'
+import { HomeserverView } from '../features/homeserver/HomeserverView'
 import type { Area, StoragePath } from '../drive/paths'
 import { newMenuEntries } from '../features/actions/menus'
 import { useItemActions } from '../features/actions/useItemActions'
@@ -32,20 +37,22 @@ import { Dialog, DialogHostProvider, useDialogHost } from '../ui/Dialog'
 import { Menu, type MenuAnchor, type MenuEntry } from '../ui/Menu'
 import { useNotifier } from '../ui/Snackbar'
 import { DriveProvider, useDrive } from './DriveContext'
-import { AREA_LABELS } from './locations'
+import { AREA_LABELS, HOMESERVER_AREA_LABELS } from './locations'
 import { routeHash, useRoute, type Route } from './routes'
 import { ViewPreferencesProvider, useViewPreferences } from './viewPreferences'
 import './DriveApp.css'
 
 interface DriveAppProps {
   session: Session
+  /** Switches to a session of the same identity with different access. */
+  onReplaceSession: (next: Session) => Promise<void>
   onSignOut: () => Promise<void>
 }
 
 /** The signed-in app: header, sidebar and the view for the current route. */
-export function DriveApp({ session, onSignOut }: DriveAppProps) {
+export function DriveApp({ session, onReplaceSession, onSignOut }: DriveAppProps) {
   return (
-    <DriveProvider session={session}>
+    <DriveProvider session={session} replaceSession={onReplaceSession}>
       <ViewPreferencesProvider>
         <DialogHostProvider>
           <UploadsProvider>
@@ -98,8 +105,15 @@ function RouteView({ route }: { route: Route }) {
   switch (route.view) {
     case 'folder':
       return (
-        <FolderView key={`${route.area}/${route.folder}`} area={route.area} folder={route.folder} />
+        <FolderView
+          key={`${route.scope}/${route.area}/${route.folder}`}
+          scope={route.scope}
+          area={route.area}
+          folder={route.folder}
+        />
       )
+    case 'homeserver':
+      return <HomeserverView />
     case 'recent':
       return <RecentView />
     case 'starred':
@@ -113,12 +127,16 @@ function RouteView({ route }: { route: Route }) {
   }
 }
 
-/** The folder that New and uploads use: the open folder, or the private area in other views. */
+/**
+ * The folder that New and uploads use: the open folder when this session may write it, otherwise
+ * the private Drive area.
+ */
 function useTargetFolder(route: Route): { folder?: StoragePath; caption?: string } {
   const { access } = useDrive()
   if (route.view === 'folder') {
-    const root = access.roots[route.area]
-    return { folder: root && ((route.folder ? `${root}${route.folder}/` : root) as StoragePath) }
+    const root = route.scope === 'drive' ? access.roots[route.area] : HOMESERVER_ROOTS[route.area]
+    const folder = root && ((route.folder ? `${root}${route.folder}/` : root) as StoragePath)
+    if (folder && canWrite(access, folder)) return { folder }
   }
   const area: Area | undefined = access.roots.private
     ? 'private'
@@ -134,7 +152,7 @@ function Sidebar({ route }: { route: Route }) {
   const uploads = useUploads()
   const { folder, caption } = useTargetFolder(route)
   const [menu, setMenu] = useState<MenuAnchor>()
-  const current = route.view === 'folder' ? `folder:${route.area}` : route.view
+  const current = route.view === 'folder' ? `${route.scope}:${route.area}` : route.view
 
   return (
     <nav className="sidebar" aria-label="Folders and views">
@@ -174,8 +192,8 @@ function Sidebar({ route }: { route: Route }) {
             indent
             icon={area === 'public' ? <Globe size={20} /> : <Lock size={20} />}
             label={AREA_LABELS[area]}
-            route={{ view: 'folder', area, folder: '' }}
-            active={current === `folder:${area}`}
+            route={{ view: 'folder', scope: 'drive', area, folder: '' }}
+            active={current === `drive:${area}`}
             disabled={!access.roots[area]}
             dropTarget={access.roots[area]}
           />
@@ -202,18 +220,41 @@ function Sidebar({ route }: { route: Route }) {
         />
       </ul>
 
-      <div className="sidebar-access">
-        <strong>
-          {access.mode === 'entire-homeserver' ? 'Entire homeserver' : 'Drive folder'}
-        </strong>
-        <p>
-          {access.mode === 'entire-homeserver'
-            ? 'You can browse and change every file, including other apps’ data.'
-            : 'Pubky Drive only sees the files it stores.'}
-        </p>
+      <div className="sidebar-section">
+        <ul className="sidebar-nav">
+          <NavItem
+            icon={<Server size={20} />}
+            label="Homeserver"
+            route={{ view: 'homeserver' }}
+            active={current === 'homeserver'}
+            hint={homeserverHint(access)}
+          />
+          {(['public', 'private'] as const).map(
+            (area) =>
+              access.homeserver[area] && (
+                <NavItem
+                  key={area}
+                  indent
+                  icon={area === 'public' ? <Globe size={20} /> : <Lock size={20} />}
+                  label={HOMESERVER_AREA_LABELS[area]}
+                  route={{ view: 'folder', scope: 'homeserver', area, folder: '' }}
+                  active={current === `homeserver:${area}`}
+                  dropTarget={HOMESERVER_ROOTS[area]}
+                />
+              ),
+          )}
+        </ul>
       </div>
     </nav>
   )
+}
+
+/** A short note after the Homeserver label: what the session may do there. */
+function homeserverHint(access: DriveAccess) {
+  const level = homeserverLevel(access)
+  if (level === 'view') return 'View only'
+  if (level === 'manage') return undefined
+  return 'No access'
 }
 
 interface NavItemProps {
@@ -224,9 +265,10 @@ interface NavItemProps {
   indent?: boolean
   disabled?: boolean
   dropTarget?: StoragePath
+  hint?: string
 }
 
-function NavItem({ icon, label, route, active, indent, disabled, dropTarget }: NavItemProps) {
+function NavItem({ icon, label, route, active, indent, disabled, dropTarget, hint }: NavItemProps) {
   const { active: dropActive, dropProps } = useDropTarget(disabled ? undefined : dropTarget)
   return (
     <li>
@@ -239,6 +281,7 @@ function NavItem({ icon, label, route, active, indent, disabled, dropTarget }: N
       >
         {icon}
         <span>{label}</span>
+        {hint && <span className="sidebar-hint">{hint}</span>}
       </a>
     </li>
   )
@@ -247,7 +290,9 @@ function NavItem({ icon, label, route, active, indent, disabled, dropTarget }: N
 function AccountButton({ onSignOut }: { onSignOut: () => Promise<void> }) {
   const { ownerZ32, access } = useDrive()
   const { notify } = useNotifier()
+  const openAccessDialog = useAccessDialog()
   const [anchor, setAnchor] = useState<MenuAnchor>()
+  const level = homeserverLevel(access)
   const publicKey = `pubky${ownerZ32}`
 
   const entries: MenuEntry[] = [
@@ -261,7 +306,17 @@ function AccountButton({ onSignOut }: { onSignOut: () => Promise<void> }) {
     {
       type: 'caption',
       label:
-        access.mode === 'entire-homeserver' ? 'Access: entire homeserver' : 'Access: Drive folder',
+        level === 'manage'
+          ? 'Access: all files (can change)'
+          : level === 'view'
+            ? 'Access: Drive folder, view all files'
+            : 'Access: Drive folder',
+    },
+    {
+      type: 'item',
+      label: 'Change access…',
+      icon: ShieldCheck,
+      onSelect: () => openAccessDialog(),
     },
     { type: 'separator' },
     {

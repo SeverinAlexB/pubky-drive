@@ -10,6 +10,8 @@ runs entirely in the browser and talks directly to your Homeserver, without its 
 - **Public and private areas.** "My Drive" shows your public files (`/pub/…`, readable by anyone
   with the address) and your private files (`/priv/…`, readable only by you and apps you
   authorize).
+- **Homeserver section** for browsing, and optionally managing, everything on your Homeserver,
+  including other apps' data.
 - **Browse** folders with breadcrumbs, a list or grid layout, sorting, a type filter and a details
   pane.
 - **Upload** files and folders with the New menu or by dragging them from your computer; download
@@ -27,18 +29,24 @@ runs entirely in the browser and talks directly to your Homeserver, without its 
 **Private means access-controlled, not encrypted.** The Homeserver operator can read private
 files. Homeservers can't share files with specific people, so sharing means making an item public.
 
-## Access modes
+## Access levels
 
-When you sign in with [Pubky Ring](https://pubkyring.app/), you choose what Pubky Drive may
-access:
+When you sign in with [Pubky Ring](https://pubkyring.app/), Pubky Drive asks only for its own
+folder. **My Drive** (Public and Private) always shows that folder:
+`/pub/pubky-drive/files/` and `/priv/pubky-drive/files/`.
 
-| Mode                   | What you see                                                                                  | Capabilities requested                       |
-| ---------------------- | --------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| Drive folder (default) | Only files Pubky Drive stores, under `/pub/pubky-drive/files/` and `/priv/pubky-drive/files/` | `/pub/pubky-drive/:rw,/priv/pubky-drive/:rw` |
-| Entire homeserver      | All of `/pub/` and `/priv/`, including other apps' data                                       | `/pub/:rw,/priv/:rw`                         |
+The **Homeserver** section in the sidebar shows your whole storage, `/pub/` and `/priv/`,
+including other apps' data. Opening it the first time asks for more access, which you approve in
+Pubky Ring:
 
-In both modes, starred items and the bin are stored under `/priv/pubky-drive/`. Changing other
-apps' data in Entire homeserver mode can break those apps.
+| Level            | Capabilities requested                       | What you can do                               |
+| ---------------- | -------------------------------------------- | --------------------------------------------- |
+| Drive folder     | `/pub/pubky-drive/:rw,/priv/pubky-drive/:rw` | Everything in My Drive, Starred and Bin       |
+| View all files   | The Drive folder, plus `/pub/:r,/priv/:r`    | Also browse, preview and download any file    |
+| Manage all files | `/pub/:rw,/priv/:rw`                         | Also create, rename, move and delete any file |
+
+You can change the level at any time with **Change access…** in the account menu. Starred items
+and the bin are stored under `/priv/pubky-drive/`. Changing other apps' data can break those apps.
 
 ## Quick start
 

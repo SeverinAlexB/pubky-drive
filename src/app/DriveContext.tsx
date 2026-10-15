@@ -32,13 +32,21 @@ interface DriveContextValue {
   starred: ReadonlySet<StoragePath>
   /** Applies `change` to the starred paths and saves them. */
   updateStarred(change: (current: ReadonlySet<StoragePath>) => Set<StoragePath>): Promise<void>
-  /** Every file and folder in both areas, cached until the next change. */
+  /** Every file and folder in both Drive areas, cached until the next change. */
   loadSearchIndex(): Promise<DriveItem[]>
+  /** Switches to a session of the same identity with different access, such as homeserver access. */
+  replaceSession(next: Session): Promise<void>
 }
 
 const DriveContext = createContext<DriveContextValue | undefined>(undefined)
 
-export function DriveProvider({ session, children }: { session: Session; children: ReactNode }) {
+interface DriveProviderProps {
+  session: Session
+  replaceSession: (next: Session) => Promise<void>
+  children: ReactNode
+}
+
+export function DriveProvider({ session, replaceSession, children }: DriveProviderProps) {
   const ownerZ32 = session.info.publicKey.z32()
   const access = useMemo(() => accessFromCapabilities(session.info.capabilities), [session])
   const drive = useMemo(
@@ -111,6 +119,7 @@ export function DriveProvider({ session, children }: { session: Session; childre
       starred,
       updateStarred,
       loadSearchIndex,
+      replaceSession,
     }),
     [
       session,
@@ -123,6 +132,7 @@ export function DriveProvider({ session, children }: { session: Session; childre
       starred,
       updateStarred,
       loadSearchIndex,
+      replaceSession,
     ],
   )
 

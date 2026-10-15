@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { describeError } from '../drive/errors'
 import { SignInPage } from '../features/auth/SignInPage'
 import { PublicViewer } from '../features/sharing/PublicViewer'
-import { restoreSavedSession, saveSession, signOut } from '../pubky/auth'
+import { replaceSession, restoreSavedSession, saveSession, signOut } from '../pubky/auth'
 import { SnackbarProvider } from '../ui/Snackbar'
 import { DriveApp } from './DriveApp'
 import { useRoute } from './routes'
@@ -40,6 +40,15 @@ function SessionGate() {
     setSession({ state: 'signed-in', session: signedIn })
   }, [])
 
+  const onReplaceSession = useCallback(
+    async (next: Session) => {
+      if (session.state !== 'signed-in') return
+      await replaceSession(session.session, next)
+      setSession({ state: 'signed-in', session: next })
+    },
+    [session],
+  )
+
   const onSignOut = useCallback(async () => {
     if (session.state !== 'signed-in') return
     await signOut(session.session)
@@ -61,6 +70,12 @@ function SessionGate() {
         </>
       )
     case 'signed-in':
-      return <DriveApp session={session.session} onSignOut={onSignOut} />
+      return (
+        <DriveApp
+          session={session.session}
+          onReplaceSession={onReplaceSession}
+          onSignOut={onSignOut}
+        />
+      )
   }
 }
