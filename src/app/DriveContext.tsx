@@ -17,6 +17,7 @@ import {
 } from '../drive/access'
 import type { DriveItem } from '../drive/items'
 import type { Area, StoragePath } from '../drive/paths'
+import { RetryingFileStore, type BusyListener } from '../drive/retryingFileStore'
 import { DriveStorage, type FileStore } from '../drive/storage'
 import { deleteExpiredEntries } from '../features/bin/bin'
 import { listEverything } from '../features/search/search'
@@ -39,6 +40,8 @@ interface DriveContextValue {
   starred: ReadonlySet<StoragePath>
   /** Applies `change` to the starred paths and saves them. */
   updateStarred(change: (current: ReadonlySet<StoragePath>) => Set<StoragePath>): Promise<void>
+  /** Calls `listener` while requests wait for the homeserver's rate limit; returns an unsubscribe function. */
+  onHomeserverBusy(listener: BusyListener): () => void
   /** The session's one connection to the homeserver's event log. */
   events: EventHub
   /** Every file and folder in both Drive areas, cached until the next change. */
@@ -58,10 +61,16 @@ interface DriveProviderProps {
 export function DriveProvider({ session, replaceSession, children }: DriveProviderProps) {
   const ownerZ32 = session.info.publicKey.z32()
   const access = useMemo(() => accessFromCapabilities(session.info.capabilities), [session])
-  const drive = useMemo(
-    () => new DriveStorage(session.storage as unknown as FileStore, ownerZ32, HIDDEN_APP_FOLDERS),
-    [session, ownerZ32],
+  // Retries rate-limited requests; see src/drive/retryingFileStore.ts.
+  const files = useMemo(
+    () => new RetryingFileStore(session.storage as unknown as FileStore),
+    [session],
   )
+  const drive = useMemo(
+    () => new DriveStorage(files, ownerZ32, HIDDEN_APP_FOLDERS),
+    [files, ownerZ32],
+  )
+  const onHomeserverBusy = useCallback((listener: BusyListener) => files.onBusy(listener), [files])
   const roots = useMemo(
     () =>
       (['public', 'private'] as Area[]).flatMap((area) =>
@@ -149,6 +158,7 @@ export function DriveProvider({ session, replaceSession, children }: DriveProvid
       loadSearchIndex,
       replaceSession,
       events,
+      onHomeserverBusy,
     }),
     [
       session,
@@ -163,6 +173,7 @@ export function DriveProvider({ session, replaceSession, children }: DriveProvid
       loadSearchIndex,
       replaceSession,
       events,
+      onHomeserverBusy,
     ],
   )
 

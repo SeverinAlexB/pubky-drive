@@ -38,7 +38,8 @@ import { followMove, forgetRemoved } from '../starred/starred'
 export type ItemActions = ReturnType<typeof useItemActions>
 
 export function useItemActions() {
-  const { drive, access, roots, ownerZ32, markChanged, starred, updateStarred } = useDrive()
+  const { drive, access, roots, ownerZ32, markChanged, starred, updateStarred, onHomeserverBusy } =
+    useDrive()
   const { notify, dismiss } = useNotifier()
   const { openDialog } = useDialogHost()
   const confirm = useConfirm()
@@ -49,19 +50,29 @@ export function useItemActions() {
      * caller's outcome message replaces the progress message; a failure removes it.
      */
     async function run<T>(progressLabel: string, task: (onProgress: Progress) => Promise<T>) {
-      let progressId = notify(`${progressLabel}…`, { persistent: true })
+      let step = `${progressLabel}…`
+      let progressId = notify(step, { persistent: true })
       const onProgress: Progress = (done, total) => {
         if (total < 2) return
-        progressId = notify(`${progressLabel} ${Math.min(done + 1, total)} of ${total}…`, {
-          persistent: true,
-        })
+        step = `${progressLabel} ${Math.min(done + 1, total)} of ${total}…`
+        progressId = notify(step, { persistent: true })
       }
+      // Rate-limited requests wait and retry; say so, so a pause doesn't look like a hang.
+      const stopListening = onHomeserverBusy((waitMs) => {
+        progressId = notify(
+          `${step} The homeserver is busy; retrying in ${Math.ceil(waitMs / 1000)} s.`,
+          {
+            persistent: true,
+          },
+        )
+      })
       try {
         return await task(onProgress)
       } catch (error) {
         dismiss(progressId)
         throw error
       } finally {
+        stopListening()
         markChanged()
       }
     }
@@ -429,6 +440,7 @@ export function useItemActions() {
     drive,
     access,
     roots,
+    onHomeserverBusy,
     ownerZ32,
     markChanged,
     starred,

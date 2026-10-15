@@ -57,3 +57,30 @@ test('a change made in another tab appears in the open folder', async ({ page, c
   await expect(row(other, 'Made elsewhere')).toBeVisible({ timeout: 15_000 })
   await other.close()
 })
+
+test('binning a public folder with more files than the delete limit allows completes', async ({
+  page,
+}) => {
+  test.setTimeout(120_000)
+  const requests = trackRequests(page)
+  await signUp(page)
+  await openArea(page, 'Public')
+  await createFolder(page, 'Many')
+  await row(page, 'Many').dblclick()
+  await uploadFiles(
+    page,
+    Array.from({ length: 120 }, (_, index) => ({ name: `file-${index}.txt`, text: String(index) })),
+  )
+  await page
+    .getByRole('navigation', { name: 'Folder path' })
+    .getByRole('button', { name: 'Public' })
+    .click()
+
+  await row(page, 'Many').click()
+  await page.keyboard.press('Delete')
+  await expect(page.getByRole('status')).toContainText('‘Many’ moved to bin', { timeout: 90_000 })
+  await expect(row(page, 'Many')).toHaveCount(0)
+
+  // Deletes were paced below the homeserver's limit, so none was refused.
+  expect(requests.tooManyRequests).toEqual([])
+})
