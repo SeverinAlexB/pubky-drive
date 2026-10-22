@@ -21,7 +21,7 @@
     "lint:code": "eslint ."
   },
   "dependencies": {
-    "@synonymdev/pubky": "^0.16.1",
+    "@synonymdev/pubky": "^0.16.2",
     "fflate": "^0.8.3",
     "lucide-react": "^1.57.0",
     "qrcode": "^1.5.4",
